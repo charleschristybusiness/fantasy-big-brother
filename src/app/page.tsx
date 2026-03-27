@@ -1,65 +1,142 @@
-import Image from "next/image";
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
+import { Season } from '@/lib/types';
 
-export default function Home() {
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  const { data: season } = await supabase
+    .from('seasons')
+    .select('*')
+    .eq('status', 'active')
+    .limit(1)
+    .single();
+
+  const s = season as Season | null;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="text-center mb-12">
+        <h1 className="text-5xl font-bold text-yellow-400 mb-4">
+          Fantasy Big Brother
+        </h1>
+        {s ? (
+          <p className="text-2xl text-gray-300">{s.name}</p>
+        ) : (
+          <p className="text-xl text-gray-400">No active season. Check back soon!</p>
+        )}
+      </div>
+
+      {s && (
+        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+          {!s.submissions_locked && (
+            <Link
+              href="/submit"
+              className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg transition text-center"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+              Submit Your Bracket
+            </Link>
+          )}
+          <Link
+            href="/leaderboard"
+            className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg text-lg transition text-center"
+          >
+            View Leaderboard
+          </Link>
+        </div>
+      )}
+
+      <div className="bg-gray-900 rounded-xl p-8 border border-gray-800">
+        <h2 className="text-2xl font-bold text-yellow-400 mb-6">How It Works</h2>
+
+        <div className="grid md:grid-cols-3 gap-8 mb-8">
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-2">1. Draft Your Team</h3>
+            <p className="text-gray-400">
+              Pick 5 houseguests ranked 1st through 5th. Your #1 pick earns 1.5x points,
+              while your #5 pick earns 0.5x.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-2">2. Earn Points</h3>
+            <p className="text-gray-400">
+              Your picks earn points throughout the season based on their performance
+              in competitions and how far they make it.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-2">3. Win the League</h3>
+            <p className="text-gray-400">
+              Check the leaderboard each week to see how your team stacks up
+              against everyone else!
+            </p>
+          </div>
+        </div>
+
+        <h3 className="text-xl font-bold text-white mb-4">Scoring</h3>
+        <div className="grid sm:grid-cols-2 gap-6">
+          <div>
+            <h4 className="font-semibold text-yellow-400 mb-2">Weekly Events (Base Points)</h4>
+            <table className="w-full text-sm">
+              <tbody className="text-gray-300">
+                <tr className="border-b border-gray-800">
+                  <td className="py-2">HOH Win</td>
+                  <td className="py-2 text-right font-mono">7 pts</td>
+                </tr>
+                <tr className="border-b border-gray-800">
+                  <td className="py-2">Veto Win</td>
+                  <td className="py-2 text-right font-mono">5 pts</td>
+                </tr>
+                <tr>
+                  <td className="py-2">Surviving the Block</td>
+                  <td className="py-2 text-right font-mono">2 pts</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <h4 className="font-semibold text-yellow-400 mb-2">Draft Multipliers</h4>
+            <table className="w-full text-sm">
+              <tbody className="text-gray-300">
+                {(['1st', '2nd', '3rd', '4th', '5th'] as const).map((pos, i) => (
+                  <tr key={pos} className={i < 4 ? 'border-b border-gray-800' : ''}>
+                    <td className="py-2">{pos} Pick</td>
+                    <td className="py-2 text-right font-mono">{[1.5, 1.25, 1.0, 0.75, 0.5][i]}x</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <h4 className="font-semibold text-yellow-400 mb-2">Placement Points</h4>
+          <p className="text-gray-400 text-sm mb-2">
+            Points awarded based on final finish (also multiplied by draft position):
+          </p>
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 text-xs text-center">
+            {[
+              ['1st', '40'], ['2nd', '35'], ['3rd', '30'], ['4th', '27'],
+              ['5th', '25'], ['6th', '22'], ['7th', '20'], ['8th', '17'],
+              ['9th', '15'], ['10th', '12'], ['11th', '10'], ['12th', '8'],
+              ['13th', '6'], ['14th', '4'], ['15th', '2'], ['16th', '0'],
+            ].map(([place, pts]) => (
+              <div key={place} className="bg-gray-800 rounded p-2">
+                <div className="text-gray-400">{place}</div>
+                <div className="text-white font-mono">{pts}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {s?.submissions_locked && (
+        <div className="mt-8 text-center">
+          <p className="text-yellow-500 text-lg font-semibold">
+            Bracket submissions are currently locked.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      )}
     </div>
   );
 }
