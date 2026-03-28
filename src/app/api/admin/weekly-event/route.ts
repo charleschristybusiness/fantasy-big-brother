@@ -95,7 +95,35 @@ export async function POST(request: NextRequest) {
   // Recalculate all bracket scores
   await recalculateScores(season_id);
 
+  // Snapshot rankings for this week
+  await snapshotRankings(season_id, week_number);
+
   return NextResponse.json({ success: true });
+}
+
+async function snapshotRankings(seasonId: string, weekNumber: number) {
+  // Fetch all brackets for this season, sorted by score descending
+  const { data: brackets } = await supabase
+    .from('brackets')
+    .select('id, total_score')
+    .eq('season_id', seasonId)
+    .order('total_score', { ascending: false });
+
+  if (!brackets || brackets.length === 0) return;
+
+  // Build ranking rows
+  const rankings = brackets.map((b, index) => ({
+    season_id: seasonId,
+    bracket_id: b.id,
+    week_number: weekNumber,
+    rank: index + 1,
+    total_score: b.total_score,
+  }));
+
+  // Upsert (uses the unique index on season_id, bracket_id, week_number)
+  await supabase
+    .from('weekly_rankings')
+    .upsert(rankings, { onConflict: 'season_id,bracket_id,week_number' });
 }
 
 async function recalculateScores(seasonId: string) {

@@ -184,6 +184,30 @@ export default function AdminPage() {
     }
   };
 
+  const clearWeek = async () => {
+    if (!season) return;
+    if (!confirm(`Are you sure you want to clear all data for Week ${weekNumber}? This will revert the evicted houseguest back to active.`)) return;
+    setWeekMessage('');
+
+    const res = await fetch('/api/admin/clear-week', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ season_id: season.id, week_number: weekNumber }),
+    });
+
+    if (res.ok) {
+      setWeekMessage(`Week ${weekNumber} cleared successfully. Scores recalculated.`);
+      setHohWinnerId('');
+      setVetoWinnerId('');
+      setEvictedId('');
+      setBlockSurvivorIds([]);
+      await loadData();
+    } else {
+      const data = await res.json();
+      setWeekMessage(data.error || 'Error clearing week.');
+    }
+  };
+
   const recalculateAllScores = async () => {
     if (!season) return;
     const res = await fetch('/api/admin/recalculate', {
@@ -223,6 +247,8 @@ export default function AdminPage() {
   };
 
   const activeHouseguests = houseguests.filter((h) => h.status === 'active');
+  // For editing past weeks, show all houseguests (evicted ones may have been active that week)
+  const allHouseguests = houseguests;
 
   const loadWeekData = async (week: number) => {
     if (!season) return;
@@ -535,8 +561,10 @@ export default function AdminPage() {
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
               >
                 <option value="">-- None --</option>
-                {activeHouseguests.map((hg) => (
-                  <option key={hg.id} value={hg.id}>{hg.name}</option>
+                {allHouseguests.map((hg) => (
+                  <option key={hg.id} value={hg.id}>
+                    {hg.name}{hg.status !== 'active' ? ` (${hg.status})` : ''}
+                  </option>
                 ))}
               </select>
             </div>
@@ -548,8 +576,10 @@ export default function AdminPage() {
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
               >
                 <option value="">-- None --</option>
-                {activeHouseguests.map((hg) => (
-                  <option key={hg.id} value={hg.id}>{hg.name}</option>
+                {allHouseguests.map((hg) => (
+                  <option key={hg.id} value={hg.id}>
+                    {hg.name}{hg.status !== 'active' ? ` (${hg.status})` : ''}
+                  </option>
                 ))}
               </select>
             </div>
@@ -563,8 +593,10 @@ export default function AdminPage() {
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
             >
               <option value="">-- None --</option>
-              {activeHouseguests.map((hg) => (
-                <option key={hg.id} value={hg.id}>{hg.name}</option>
+              {allHouseguests.map((hg) => (
+                <option key={hg.id} value={hg.id}>
+                  {hg.name}{hg.status !== 'active' ? ` (${hg.status})` : ''}
+                </option>
               ))}
             </select>
           </div>
@@ -574,7 +606,7 @@ export default function AdminPage() {
               Block Survivors (select all who survived the block this week)
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {activeHouseguests.map((hg) => (
+              {allHouseguests.map((hg) => (
                 <label
                   key={hg.id}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition ${
@@ -589,7 +621,12 @@ export default function AdminPage() {
                     onChange={() => toggleBlockSurvivor(hg.id)}
                     className="accent-yellow-500"
                   />
-                  <span className="text-white text-sm">{hg.name}</span>
+                  <span className="text-white text-sm">
+                    {hg.name}
+                    {hg.status !== 'active' && (
+                      <span className="text-gray-500 text-xs ml-1">({hg.status})</span>
+                    )}
+                  </span>
                 </label>
               ))}
             </div>
@@ -601,12 +638,20 @@ export default function AdminPage() {
             </div>
           )}
 
-          <button
-            onClick={submitWeeklyResults}
-            className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-lg transition"
-          >
-            Save Week {weekNumber} Results
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={submitWeeklyResults}
+              className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-lg transition"
+            >
+              Save Week {weekNumber} Results
+            </button>
+            <button
+              onClick={clearWeek}
+              className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-8 rounded-lg transition"
+            >
+              Clear Week {weekNumber}
+            </button>
+          </div>
         </div>
       )}
 

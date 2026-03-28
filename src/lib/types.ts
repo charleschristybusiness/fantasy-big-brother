@@ -47,6 +47,16 @@ export interface BlockSurvivor {
   houseguest_id: string;
 }
 
+export interface WeeklyRanking {
+  id: string;
+  season_id: string;
+  bracket_id: string;
+  week_number: number;
+  rank: number;
+  total_score: number;
+  created_at: string;
+}
+
 // Computed types for display
 export interface HouseguestStats {
   houseguest: Houseguest;

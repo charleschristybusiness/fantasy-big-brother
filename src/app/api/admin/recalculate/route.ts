@@ -44,5 +44,32 @@ export async function POST(request: NextRequest) {
     updated++;
   }
 
+  // Backfill weekly_rankings for all existing weeks
+  const weeks = (events || []).map((e: { week_number: number }) => e.week_number);
+  const uniqueWeeks = [...new Set(weeks)].sort((a, b) => a - b);
+
+  // Fetch updated brackets sorted by score
+  const { data: rankedBrackets } = await supabase
+    .from('brackets')
+    .select('id, total_score')
+    .eq('season_id', season_id)
+    .order('total_score', { ascending: false });
+
+  if (rankedBrackets && uniqueWeeks.length > 0) {
+    for (const week of uniqueWeeks) {
+      const rankings = rankedBrackets.map((b: { id: string; total_score: number }, index: number) => ({
+        season_id,
+        bracket_id: b.id,
+        week_number: week,
+        rank: index + 1,
+        total_score: b.total_score,
+      }));
+
+      await supabase
+        .from('weekly_rankings')
+        .upsert(rankings, { onConflict: 'season_id,bracket_id,week_number' });
+    }
+  }
+
   return NextResponse.json({ success: true, brackets_updated: updated });
 }
