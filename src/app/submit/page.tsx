@@ -5,6 +5,22 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Season, Houseguest } from '@/lib/types';
 
+function SubmitSkeleton() {
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-12">
+      <div className="h-9 w-64 animate-pulse bg-gray-800 rounded-lg mb-2" />
+      <div className="h-5 w-40 animate-pulse bg-gray-800 rounded mb-8" />
+      <div className="space-y-6">
+        <div className="h-12 w-full animate-pulse bg-gray-800 rounded-lg" />
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-12 w-full animate-pulse bg-gray-800 rounded-lg" />
+        ))}
+        <div className="h-14 w-full animate-pulse bg-gray-800 rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
 export default function SubmitBracketPage() {
   const router = useRouter();
   const [season, setSeason] = useState<Season | null>(null);
@@ -96,11 +112,7 @@ export default function SubmitBracketPage() {
   };
 
   if (loading) {
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-12 text-center text-gray-400">
-        Loading...
-      </div>
-    );
+    return <SubmitSkeleton />;
   }
 
   if (!season) {
@@ -116,30 +128,35 @@ export default function SubmitBracketPage() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 text-center">
         <h1 className="text-3xl font-bold text-white mb-4">Submissions Locked</h1>
-        <p className="text-yellow-500">
-          Bracket submissions are currently locked. The season has already begun!
-        </p>
+        <div className="inline-block bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-6 py-3">
+          <p className="text-yellow-400">
+            Bracket submissions are currently locked. The season has already begun!
+          </p>
+        </div>
       </div>
     );
   }
 
   const multipliers = ['1.5x', '1.25x', '1.0x', '0.75x', '0.5x'];
+  const multiplierColors = ['text-yellow-400', 'text-yellow-400/80', 'text-gray-300', 'text-gray-400', 'text-gray-500'];
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold text-yellow-400 mb-2">Submit Your Bracket</h1>
-      <p className="text-gray-400 mb-8">{season.name}</p>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-yellow-400 mb-1">Submit Your Bracket</h1>
+        <p className="text-gray-400">{season.name}</p>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">
             Team Name
           </label>
           <input
             type="text"
             value={teamName}
             onChange={(e) => setTeamName(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+            className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500/50 transition-all duration-200"
             placeholder="Enter your team name"
             maxLength={50}
           />
@@ -148,15 +165,15 @@ export default function SubmitBracketPage() {
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-white">Select Your 5 Houseguests</h2>
           {[0, 1, 2, 3, 4].map((index) => (
-            <div key={index}>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+            <div key={index} className="bg-gray-900 rounded-xl border border-gray-800 p-4 hover:border-gray-700 transition-colors duration-200">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Pick #{index + 1}{' '}
-                <span className="text-yellow-400">({multipliers[index]} multiplier)</span>
+                <span className={`font-mono font-bold ${multiplierColors[index]}`}>({multipliers[index]} multiplier)</span>
               </label>
               <select
                 value={picks[index]}
                 onChange={(e) => handlePickChange(index, e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500/50 transition-all duration-200"
               >
                 <option value="">-- Select a houseguest --</option>
                 {getAvailableHouseguests(index).map((hg) => (
@@ -170,7 +187,7 @@ export default function SubmitBracketPage() {
         </div>
 
         {error && (
-          <div className="bg-red-900/50 border border-red-700 rounded-lg p-4 text-red-300">
+          <div className="bg-red-900/30 border border-red-500/30 rounded-xl p-4 text-red-400">
             {error}
           </div>
         )}
@@ -178,7 +195,7 @@ export default function SubmitBracketPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-600 disabled:cursor-not-allowed text-gray-900 font-bold py-3 px-8 rounded-lg text-lg transition"
+          className="w-full bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-700 disabled:cursor-not-allowed text-gray-900 font-bold py-4 px-8 rounded-xl text-lg transition-all duration-300 shadow-[0_0_20px_rgba(250,204,21,0.15)] hover:shadow-[0_0_30px_rgba(250,204,21,0.3)] disabled:shadow-none"
         >
           {submitting ? 'Submitting...' : 'Submit Bracket'}
         </button>

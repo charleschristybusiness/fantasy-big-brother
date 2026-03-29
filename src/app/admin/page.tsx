@@ -174,7 +174,6 @@ export default function AdminPage() {
     if (res.ok) {
       setWeekMessage(`Week ${weekNumber} results saved! Scores recalculated.`);
       await loadData();
-      // Reset form for next week
       setHohWinnerId('');
       setVetoWinnerId('');
       setEvictedId('');
@@ -247,7 +246,6 @@ export default function AdminPage() {
   };
 
   const activeHouseguests = houseguests.filter((h) => h.status === 'active');
-  // For editing past weeks, show all houseguests (evicted ones may have been active that week)
   const allHouseguests = houseguests;
 
   const loadWeekData = async (week: number) => {
@@ -281,47 +279,57 @@ export default function AdminPage() {
   };
 
   if (loading) {
-    return <div className="max-w-4xl mx-auto px-4 py-12 text-center text-gray-400">Loading...</div>;
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-12">
+        <div className="h-9 w-52 animate-pulse bg-gray-800 rounded-lg mb-8" />
+        <div className="flex gap-2 mb-8">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-10 w-32 animate-pulse bg-gray-800 rounded-lg" />
+          ))}
+        </div>
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 min-h-[300px] animate-pulse" />
+      </div>
+    );
   }
 
   // No season exists - show create form
   if (!season) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-6">Create a New Season</h1>
-        <div className="space-y-4">
+        <h1 className="text-3xl font-bold text-yellow-400 mb-8">Create a New Season</h1>
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 space-y-4">
           <div>
-            <label className="block text-sm text-gray-300 mb-1">Season Name</label>
+            <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Season Name</label>
             <input
               type="text"
               value={seasonName}
               onChange={(e) => setSeasonName(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
               placeholder="e.g., Big Brother 27"
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-300 mb-1">Number of Houseguests</label>
+            <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Number of Houseguests</label>
             <input
               type="number"
               value={houseguestCount}
               onChange={(e) => setHouseguestCount(Number(e.target.value))}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-300 mb-1">Admin Password</label>
+            <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Admin Password</label>
             <input
               type="text"
               value={adminPass}
               onChange={(e) => setAdminPass(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
               placeholder="Set an admin password"
             />
           </div>
           <button
             onClick={createSeason}
-            className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-lg transition"
+            className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(250,204,21,0.15)] hover:shadow-[0_0_20px_rgba(250,204,21,0.25)]"
           >
             Create Season
           </button>
@@ -334,20 +342,20 @@ export default function AdminPage() {
   if (!authenticated) {
     return (
       <div className="max-w-md mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-6">Admin Login</h1>
-        <div className="space-y-4">
+        <h1 className="text-3xl font-bold text-yellow-400 mb-8">Admin Login</h1>
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 space-y-4">
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
             placeholder="Enter admin password"
           />
           {authError && <p className="text-red-400 text-sm">{authError}</p>}
           <button
             onClick={handleLogin}
-            className="w-full bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-lg transition"
+            className="w-full bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-xl transition-all duration-300"
           >
             Login
           </button>
@@ -360,7 +368,7 @@ export default function AdminPage() {
     <div className="max-w-5xl mx-auto px-4 py-12">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-yellow-400">Admin Dashboard</h1>
-        <span className="text-gray-400">{season.name}</span>
+        <span className="text-gray-400 text-sm font-mono">{season.name}</span>
       </div>
 
       {/* Tabs */}
@@ -369,10 +377,10 @@ export default function AdminPage() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
+            className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 ${
               activeTab === tab
-                ? 'bg-yellow-500 text-gray-900'
-                : 'bg-gray-800 text-gray-400 hover:text-white'
+                ? 'bg-yellow-500 text-gray-900 shadow-[0_0_15px_rgba(250,204,21,0.2)]'
+                : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
             }`}
           >
             {tab === 'season' ? 'Season Setup' : tab === 'weekly' ? 'Weekly Results' : 'Brackets'}
@@ -382,48 +390,48 @@ export default function AdminPage() {
 
       {/* Season Setup */}
       {activeTab === 'season' && (
-        <div className="space-y-8">
+        <div className="space-y-6">
           <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <h2 className="text-xl font-bold text-white mb-4">Season Settings</h2>
+            <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">Season Settings</h2>
             <div className="grid sm:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm text-gray-300 mb-1">Season Name</label>
+                <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Season Name</label>
                 <input
                   type="text"
                   value={seasonName}
                   onChange={(e) => setSeasonName(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-300 mb-1">Houseguest Count</label>
+                <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Houseguest Count</label>
                 <input
                   type="number"
                   value={houseguestCount}
                   onChange={(e) => setHouseguestCount(Number(e.target.value))}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-300 mb-1">Admin Password</label>
+                <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Admin Password</label>
                 <input
                   type="text"
                   value={adminPass}
                   onChange={(e) => setAdminPass(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
                 />
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               <button
                 onClick={updateSeason}
-                className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-2 px-6 rounded-lg transition"
+                className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-2.5 px-6 rounded-xl transition-all duration-200"
               >
                 Save Settings
               </button>
               <button
                 onClick={toggleSubmissions}
-                className={`font-bold py-2 px-6 rounded-lg transition ${
+                className={`font-bold py-2.5 px-6 rounded-xl transition-all duration-200 ${
                   season.submissions_locked
                     ? 'bg-green-600 hover:bg-green-500 text-white'
                     : 'bg-red-600 hover:bg-red-500 text-white'
@@ -433,7 +441,7 @@ export default function AdminPage() {
               </button>
               <button
                 onClick={recalculateAllScores}
-                className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition"
+                className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-2.5 px-6 rounded-xl transition-all duration-200 border border-gray-700"
               >
                 Recalculate All Scores
               </button>
@@ -441,15 +449,15 @@ export default function AdminPage() {
           </div>
 
           <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <h2 className="text-xl font-bold text-white mb-4">
-              Houseguests ({houseguests.length})
+            <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">
+              Houseguests <span className="text-gray-400 font-mono text-sm normal-case">({houseguests.length})</span>
             </h2>
             <div className="flex gap-2 mb-4">
               <input
                 type="text"
                 value={newHouseguestName}
                 onChange={(e) => setNewHouseguestName(e.target.value)}
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
                 placeholder="Houseguest name"
                 onKeyDown={(e) => e.key === 'Enter' && addHouseguest()}
               />
@@ -457,12 +465,12 @@ export default function AdminPage() {
                 type="text"
                 value={newHouseguestPhoto}
                 onChange={(e) => setNewHouseguestPhoto(e.target.value)}
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
                 placeholder="Photo URL (optional)"
               />
               <button
                 onClick={addHouseguest}
-                className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-2 px-4 rounded-lg transition"
+                className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-2.5 px-5 rounded-xl transition-all duration-200"
               >
                 Add
               </button>
@@ -471,26 +479,26 @@ export default function AdminPage() {
               {houseguests.map((hg) => (
                 <div
                   key={hg.id}
-                  className="flex items-center justify-between bg-gray-800 rounded-lg px-4 py-2"
+                  className="flex items-center justify-between bg-gray-800/50 rounded-lg px-4 py-2.5 border border-gray-700/50 hover:border-gray-600/50 transition-colors duration-200"
                 >
                   <div className="flex items-center gap-3">
                     {hg.photo_url ? (
                       <img src={hg.photo_url} alt={hg.name} className="w-8 h-8 rounded-full object-cover" />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-sm font-bold">
+                      <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-sm font-bold text-gray-400">
                         {hg.name[0]}
                       </div>
                     )}
                     <span className="text-white">{hg.name}</span>
                     <span
-                      className={`text-xs px-2 py-0.5 rounded ${
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                         hg.status === 'active'
-                          ? 'bg-green-900 text-green-300'
+                          ? 'bg-green-900/50 text-green-400'
                           : hg.status === 'winner'
-                          ? 'bg-yellow-900 text-yellow-300'
+                          ? 'bg-yellow-900/50 text-yellow-400'
                           : hg.status === 'runner_up'
-                          ? 'bg-blue-900 text-blue-300'
-                          : 'bg-red-900 text-red-300'
+                          ? 'bg-blue-900/50 text-blue-400'
+                          : 'bg-red-900/50 text-red-400'
                       }`}
                     >
                       {hg.status}
@@ -498,7 +506,7 @@ export default function AdminPage() {
                   </div>
                   <button
                     onClick={() => removeHouseguest(hg.id)}
-                    className="text-red-400 hover:text-red-300 text-sm"
+                    className="text-red-400 hover:text-red-300 text-sm transition-colors duration-200"
                   >
                     Remove
                   </button>
@@ -512,21 +520,21 @@ export default function AdminPage() {
       {/* Weekly Results */}
       {activeTab === 'weekly' && (
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-          <h2 className="text-xl font-bold text-white mb-4">Enter Weekly Results</h2>
+          <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">Enter Weekly Results</h2>
 
           <div className="mb-4">
-            <label className="block text-sm text-gray-300 mb-1">Week Number</label>
+            <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Week Number</label>
             <div className="flex gap-2">
               <input
                 type="number"
                 min={1}
                 value={weekNumber}
                 onChange={(e) => setWeekNumber(Number(e.target.value))}
-                className="w-24 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                className="w-24 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white font-mono focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
               />
               <button
                 onClick={() => loadWeekData(weekNumber)}
-                className="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition text-sm"
+                className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 px-4 rounded-lg transition-colors duration-200 text-sm border border-gray-700"
               >
                 Load Week
               </button>
@@ -534,19 +542,19 @@ export default function AdminPage() {
           </div>
 
           {weeklyEvents.length > 0 && (
-            <div className="mb-4 flex gap-2 flex-wrap">
-              <span className="text-sm text-gray-400 mr-2">Existing weeks:</span>
+            <div className="mb-4 flex gap-2 flex-wrap items-center">
+              <span className="text-sm font-semibold text-gray-400 uppercase tracking-wider mr-2">Existing:</span>
               {weeklyEvents.map((e) => (
                 <button
                   key={e.id}
                   onClick={() => loadWeekData(e.week_number)}
-                  className={`text-sm px-3 py-1 rounded-lg transition ${
+                  className={`text-sm px-3 py-1.5 rounded-lg font-mono transition-all duration-200 ${
                     weekNumber === e.week_number
-                      ? 'bg-yellow-500 text-gray-900'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      ? 'bg-yellow-500 text-gray-900 shadow-[0_0_10px_rgba(250,204,21,0.15)]'
+                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
                   }`}
                 >
-                  Week {e.week_number}
+                  Wk {e.week_number}
                 </button>
               ))}
             </div>
@@ -554,11 +562,11 @@ export default function AdminPage() {
 
           <div className="grid sm:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm text-gray-300 mb-1">HOH Winner</label>
+              <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">HOH Winner</label>
               <select
                 value={hohWinnerId}
                 onChange={(e) => setHohWinnerId(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
               >
                 <option value="">-- None --</option>
                 {allHouseguests.map((hg) => (
@@ -569,11 +577,11 @@ export default function AdminPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-300 mb-1">Veto Winner</label>
+              <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Veto Winner</label>
               <select
                 value={vetoWinnerId}
                 onChange={(e) => setVetoWinnerId(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
               >
                 <option value="">-- None --</option>
                 {allHouseguests.map((hg) => (
@@ -586,11 +594,11 @@ export default function AdminPage() {
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm text-gray-300 mb-1">Evicted Houseguest</label>
+            <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Evicted Houseguest</label>
             <select
               value={evictedId}
               onChange={(e) => setEvictedId(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
             >
               <option value="">-- None --</option>
               {allHouseguests.map((hg) => (
@@ -602,17 +610,18 @@ export default function AdminPage() {
           </div>
 
           <div className="mb-6">
-            <label className="block text-sm text-gray-300 mb-2">
-              Block Survivors (select all who survived the block this week)
+            <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">
+              Block Survivors
             </label>
+            <p className="text-xs text-gray-500 mb-3">Select all who survived the block this week</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {allHouseguests.map((hg) => (
                 <label
                   key={hg.id}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition ${
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 ${
                     blockSurvivorIds.includes(hg.id)
-                      ? 'bg-yellow-500/20 border border-yellow-500'
-                      : 'bg-gray-800 border border-gray-700 hover:border-gray-600'
+                      ? 'bg-yellow-500/15 border border-yellow-500/50'
+                      : 'bg-gray-800/50 border border-gray-700/50 hover:border-gray-600'
                   }`}
                 >
                   <input
@@ -633,7 +642,11 @@ export default function AdminPage() {
           </div>
 
           {weekMessage && (
-            <div className="mb-4 bg-green-900/50 border border-green-700 rounded-lg p-3 text-green-300 text-sm">
+            <div className={`mb-4 rounded-xl p-3.5 text-sm ${
+              weekMessage.includes('Error') || weekMessage.includes('error')
+                ? 'bg-red-900/30 border border-red-500/30 text-red-400'
+                : 'bg-green-900/30 border border-green-500/30 text-green-400'
+            }`}>
               {weekMessage}
             </div>
           )}
@@ -641,13 +654,13 @@ export default function AdminPage() {
           <div className="flex gap-3">
             <button
               onClick={submitWeeklyResults}
-              className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-lg transition"
+              className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-xl transition-all duration-200"
             >
               Save Week {weekNumber} Results
             </button>
             <button
               onClick={clearWeek}
-              className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-8 rounded-lg transition"
+              className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-8 rounded-xl transition-all duration-200"
             >
               Clear Week {weekNumber}
             </button>
@@ -658,8 +671,8 @@ export default function AdminPage() {
       {/* Brackets Management */}
       {activeTab === 'brackets' && (
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-          <h2 className="text-xl font-bold text-white mb-4">
-            Submitted Brackets ({brackets.length})
+          <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">
+            Submitted Brackets <span className="text-gray-400 font-mono text-sm normal-case">({brackets.length})</span>
           </h2>
 
           {brackets.length === 0 ? (
@@ -669,28 +682,30 @@ export default function AdminPage() {
               {brackets.map((b, i) => (
                 <div
                   key={b.id}
-                  className="flex items-center justify-between bg-gray-800 rounded-lg px-4 py-3"
+                  className="flex items-center justify-between bg-gray-800/50 rounded-lg px-4 py-3 border border-gray-700/50 hover:border-gray-600/50 transition-colors duration-200"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-gray-500 text-sm w-8">#{i + 1}</span>
+                    <span className={`font-mono text-sm w-8 ${
+                      i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-600' : 'text-gray-500'
+                    }`}>#{i + 1}</span>
                     {editingBracketId === b.id ? (
                       <div className="flex gap-2">
                         <input
                           type="text"
                           value={editTeamName}
                           onChange={(e) => setEditTeamName(e.target.value)}
-                          className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-white text-sm"
+                          className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
                           onKeyDown={(e) => e.key === 'Enter' && saveTeamName(b.id)}
                         />
                         <button
                           onClick={() => saveTeamName(b.id)}
-                          className="text-green-400 hover:text-green-300 text-sm"
+                          className="text-green-400 hover:text-green-300 text-sm transition-colors duration-200"
                         >
                           Save
                         </button>
                         <button
                           onClick={() => setEditingBracketId(null)}
-                          className="text-gray-400 hover:text-gray-300 text-sm"
+                          className="text-gray-400 hover:text-gray-300 text-sm transition-colors duration-200"
                         >
                           Cancel
                         </button>
@@ -708,13 +723,13 @@ export default function AdminPage() {
                         setEditingBracketId(b.id);
                         setEditTeamName(b.team_name);
                       }}
-                      className="text-blue-400 hover:text-blue-300 text-sm"
+                      className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors duration-200"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => deleteBracket(b.id)}
-                      className="text-red-400 hover:text-red-300 text-sm"
+                      className="text-red-400 hover:text-red-300 text-sm transition-colors duration-200"
                     >
                       Delete
                     </button>

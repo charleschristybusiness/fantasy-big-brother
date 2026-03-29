@@ -14,7 +14,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-// Distinct colors for lines
 const LINE_COLORS = [
   '#facc15', '#f87171', '#60a5fa', '#34d399', '#c084fc',
   '#fb923c', '#22d3ee', '#e879f9', '#a3e635', '#fbbf24',
@@ -36,14 +35,33 @@ interface HouseguestEntry {
   total_score: number;
 }
 
+function TrendsSkeleton() {
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-12">
+      <div className="h-9 w-52 animate-pulse bg-gray-800 rounded-lg mb-2" />
+      <div className="h-5 w-72 animate-pulse bg-gray-800 rounded mb-6" />
+      <div className="flex gap-2 mb-8">
+        <div className="h-10 w-32 animate-pulse bg-gray-800 rounded-lg" />
+        <div className="h-10 w-44 animate-pulse bg-gray-800 rounded-lg" />
+      </div>
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex-1 bg-gray-900 rounded-xl border border-gray-800 p-4 min-h-[400px] animate-pulse" />
+        <div className="lg:w-64 bg-gray-900 rounded-xl border border-gray-800 p-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-6 w-full animate-pulse bg-gray-800 rounded mb-2" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TrendsPage() {
   const [activeTab, setActiveTab] = useState<'teams' | 'houseguests'>('teams');
   const [season, setSeason] = useState<Season | null>(null);
-  // Team trend state
   const [brackets, setBrackets] = useState<RankedBracket[]>([]);
   const [rankings, setRankings] = useState<WeeklyRanking[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
-  // Houseguest trend state
   const [houseguests, setHouseguests] = useState<Houseguest[]>([]);
   const [weeklyEvents, setWeeklyEvents] = useState<WeeklyEvent[]>([]);
   const [blockSurvivors, setBlockSurvivors] = useState<BlockSurvivor[]>([]);
@@ -90,7 +108,6 @@ export default function TrendsPage() {
         supabase.from('block_survivors').select('*, weekly_events!inner(season_id)').eq('weekly_events.season_id', s.id),
       ]);
 
-      // Team trends
       const ranked: RankedBracket[] = ((bracketData || []) as Pick<Bracket, 'id' | 'team_name' | 'total_score'>[]).map(
         (b, i) => ({
           id: b.id,
@@ -103,7 +120,6 @@ export default function TrendsPage() {
       setRankings((rankingData || []) as WeeklyRanking[]);
       setSelectedTeams(new Set(ranked.map((b) => b.id)));
 
-      // Houseguest trends
       const hgs = (hgData || []) as Houseguest[];
       setHouseguests(hgs);
       setWeeklyEvents((eventsData || []) as WeeklyEvent[]);
@@ -115,7 +131,6 @@ export default function TrendsPage() {
     load();
   }, []);
 
-  // === Team chart data (unchanged logic) ===
   const teamChartData = useMemo(() => {
     const weekMap = new Map<number, Map<string, WeeklyRanking>>();
     for (const r of rankings) {
@@ -133,13 +148,11 @@ export default function TrendsPage() {
     });
   }, [rankings]);
 
-  // === Houseguest chart data (computed from events) ===
   const houseguestChartData = useMemo(() => {
     if (weeklyEvents.length === 0 || houseguests.length === 0) return [];
 
     const weeks = [...new Set(weeklyEvents.map((e) => e.week_number))].sort((a, b) => a - b);
 
-    // Build a map of houseguest id -> eviction week
     const evictionWeekMap = new Map<string, number>();
     for (const event of weeklyEvents) {
       if (event.evicted_houseguest_id) {
@@ -147,7 +160,6 @@ export default function TrendsPage() {
       }
     }
 
-    // Build a map of event id -> week number for filtering block survivors
     const eventWeekMap = new Map<string, number>();
     for (const event of weeklyEvents) {
       eventWeekMap.set(event.id, event.week_number);
@@ -158,19 +170,16 @@ export default function TrendsPage() {
     return weeks.map((week) => {
       const entry: Record<string, number | string> = { week: `Wk ${week}` };
 
-      // Events and survivors up to this week
       const eventsUpToWeek = weeklyEvents.filter((e) => e.week_number <= week);
       const survivorsUpToWeek = blockSurvivors.filter((bs) => {
         const eventWeek = eventWeekMap.get(bs.weekly_event_id);
         return eventWeek !== undefined && eventWeek <= week;
       });
 
-      // Count evicted up to this week
       const evictedCountAtWeek = eventsUpToWeek.filter((e) => e.evicted_houseguest_id).length;
 
       for (const hg of houseguests) {
         const evictionWeek = evictionWeekMap.get(hg.id);
-        // Include houseguest up to and including their eviction week
         if (evictionWeek !== undefined && week > evictionWeek) continue;
 
         const stats = getHouseguestStats(hg, eventsUpToWeek, survivorsUpToWeek, totalHouseguests, evictedCountAtWeek);
@@ -181,7 +190,6 @@ export default function TrendsPage() {
     });
   }, [weeklyEvents, blockSurvivors, houseguests, season]);
 
-  // Sorted houseguest list: active first (by score desc), then evicted (by score desc)
   const sortedHouseguests = useMemo(() => {
     if (weeklyEvents.length === 0 || houseguests.length === 0) return [];
 
@@ -204,7 +212,6 @@ export default function TrendsPage() {
     return [...active, ...evicted];
   }, [houseguests, weeklyEvents, blockSurvivors, season]);
 
-  // Color maps
   const teamColorMap = useMemo(() => {
     const map = new Map<string, string>();
     brackets.forEach((b, i) => map.set(b.id, LINE_COLORS[i % LINE_COLORS.length]));
@@ -217,7 +224,6 @@ export default function TrendsPage() {
     return map;
   }, [sortedHouseguests]);
 
-  // Team selection helpers
   function selectAllTeams() {
     setSelectedTeams(new Set(brackets.map((b) => b.id)));
   }
@@ -233,7 +239,6 @@ export default function TrendsPage() {
     });
   }
 
-  // Houseguest selection helpers
   function selectAllHouseguests() {
     setSelectedHouseguests(new Set(sortedHouseguests.map((h) => h.id)));
   }
@@ -250,9 +255,7 @@ export default function TrendsPage() {
   }
 
   if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto px-4 py-12 text-center text-gray-400">Loading...</div>
-    );
+    return <TrendsSkeleton />;
   }
 
   if (!season) {
@@ -269,27 +272,29 @@ export default function TrendsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold text-yellow-400 mb-2">Ranking Trends</h1>
-      <p className="text-gray-400 mb-6">{season.name} &mdash; Week-by-week performance</p>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-yellow-400 mb-1">Ranking Trends</h1>
+        <p className="text-gray-400">{season.name} &mdash; Week-by-week performance</p>
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-8">
         <button
           onClick={() => setActiveTab('teams')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+          className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
             activeTab === 'teams'
-              ? 'bg-yellow-400 text-gray-900'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              ? 'bg-yellow-500 text-gray-900 shadow-[0_0_15px_rgba(250,204,21,0.2)]'
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
           }`}
         >
           Team Trends
         </button>
         <button
           onClick={() => setActiveTab('houseguests')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+          className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
             activeTab === 'houseguests'
-              ? 'bg-yellow-400 text-gray-900'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              ? 'bg-yellow-500 text-gray-900 shadow-[0_0_15px_rgba(250,204,21,0.2)]'
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
           }`}
         >
           Houseguest Trends
@@ -348,16 +353,16 @@ export default function TrendsPage() {
             <div className="lg:w-64 bg-gray-900 rounded-xl border border-gray-800 p-4 self-start">
               <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Teams</h2>
               <div className="flex gap-2 mb-4">
-                <button onClick={selectAllTeams} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition">Select All</button>
-                <button onClick={deselectAllTeams} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition">Deselect All</button>
+                <button onClick={selectAllTeams} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition-colors duration-200">Select All</button>
+                <button onClick={deselectAllTeams} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition-colors duration-200">Deselect All</button>
               </div>
-              <div className="space-y-1.5 max-h-[500px] overflow-y-auto">
+              <div className="space-y-1 max-h-[500px] overflow-y-auto">
                 {brackets.map((b) => (
-                  <label key={b.id} className="flex items-center gap-2.5 cursor-pointer hover:bg-gray-800/50 rounded px-2 py-1.5 transition">
+                  <label key={b.id} className="flex items-center gap-2.5 cursor-pointer hover:bg-gray-800/50 rounded-lg px-2 py-1.5 transition-colors duration-200">
                     <input type="checkbox" checked={selectedTeams.has(b.id)} onChange={() => toggleTeam(b.id)} className="accent-yellow-400 w-4 h-4 rounded" />
                     <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: teamColorMap.get(b.id) }} />
                     <span className="text-sm text-gray-300 truncate flex-1">{b.team_name}</span>
-                    <span className="text-xs text-gray-500 flex-shrink-0">#{b.current_rank}</span>
+                    <span className="text-xs text-gray-500 font-mono flex-shrink-0">#{b.current_rank}</span>
                   </label>
                 ))}
               </div>
@@ -418,16 +423,16 @@ export default function TrendsPage() {
             <div className="lg:w-64 bg-gray-900 rounded-xl border border-gray-800 p-4 self-start">
               <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Houseguests</h2>
               <div className="flex gap-2 mb-4">
-                <button onClick={selectAllHouseguests} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition">Select All</button>
-                <button onClick={deselectAllHouseguests} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition">Deselect All</button>
+                <button onClick={selectAllHouseguests} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition-colors duration-200">Select All</button>
+                <button onClick={deselectAllHouseguests} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition-colors duration-200">Deselect All</button>
               </div>
-              <div className="space-y-1.5 max-h-[500px] overflow-y-auto">
+              <div className="space-y-1 max-h-[500px] overflow-y-auto">
                 {sortedHouseguests.map((h) => (
-                  <label key={h.id} className="flex items-center gap-2.5 cursor-pointer hover:bg-gray-800/50 rounded px-2 py-1.5 transition">
+                  <label key={h.id} className="flex items-center gap-2.5 cursor-pointer hover:bg-gray-800/50 rounded-lg px-2 py-1.5 transition-colors duration-200">
                     <input type="checkbox" checked={selectedHouseguests.has(h.id)} onChange={() => toggleHouseguest(h.id)} className="accent-yellow-400 w-4 h-4 rounded" />
                     <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: hgColorMap.get(h.id) }} />
                     <span className="text-sm text-gray-300 truncate flex-1">{h.name}</span>
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${h.status === 'active' ? 'bg-green-400' : 'bg-red-400'}`} />
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${h.status === 'active' ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
                   </label>
                 ))}
               </div>
