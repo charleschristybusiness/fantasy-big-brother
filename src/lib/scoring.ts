@@ -10,7 +10,7 @@ import {
   POINT_VALUES,
 } from './types';
 
-export function getPlacementPoints(houseguest: Houseguest, totalHouseguests: number): number {
+export function getPlacementPoints(houseguest: Houseguest, totalHouseguests: number, evictedCount: number = 0): number {
   if (houseguest.status === 'winner') {
     return PLACEMENT_POINTS[totalHouseguests] || 40;
   }
@@ -20,6 +20,13 @@ export function getPlacementPoints(houseguest: Houseguest, totalHouseguests: num
   if (houseguest.eviction_order !== null) {
     return PLACEMENT_POINTS[houseguest.eviction_order] || 0;
   }
+  // Active houseguests get minimum guaranteed placement points
+  // If 5 have been evicted from 16, remaining players are guaranteed at least 6th place
+  // which corresponds to eviction_order = totalHouseguests - evictedCount
+  if (houseguest.status === 'active' && evictedCount > 0) {
+    const minPlacement = evictedCount + 1;
+    return PLACEMENT_POINTS[minPlacement] || 0;
+  }
   return 0;
 }
 
@@ -27,12 +34,13 @@ export function getHouseguestStats(
   houseguest: Houseguest,
   weeklyEvents: WeeklyEvent[],
   blockSurvivors: BlockSurvivor[],
-  totalHouseguests: number
+  totalHouseguests: number,
+  evictedCount: number = 0
 ): HouseguestStats {
   const hoh_wins = weeklyEvents.filter((e) => e.hoh_winner_id === houseguest.id).length;
   const veto_wins = weeklyEvents.filter((e) => e.veto_winner_id === houseguest.id).length;
   const block_survivals = blockSurvivors.filter((bs) => bs.houseguest_id === houseguest.id).length;
-  const placement_points = getPlacementPoints(houseguest, totalHouseguests);
+  const placement_points = getPlacementPoints(houseguest, totalHouseguests, evictedCount);
 
   const base_score =
     hoh_wins * POINT_VALUES.HOH_WIN +
@@ -65,9 +73,11 @@ export function calculateBracketScore(
     bracket.pick_5_houseguest_id,
   ];
 
+  const evictedCount = houseguests.filter((h) => h.status === 'evicted').length;
+
   const picks = pickIds.map((id, index) => {
     const houseguest = houseguests.find((h) => h.id === id)!;
-    const stats = getHouseguestStats(houseguest, weeklyEvents, blockSurvivors, totalHouseguests);
+    const stats = getHouseguestStats(houseguest, weeklyEvents, blockSurvivors, totalHouseguests, evictedCount);
     const multiplier = DRAFT_MULTIPLIERS[index];
     const pick_score = Math.round(stats.base_score * multiplier * 100) / 100;
 
