@@ -174,7 +174,6 @@ export default function AdminPage() {
     if (res.ok) {
       setWeekMessage(`Week ${weekNumber} results saved! Scores recalculated.`);
       await loadData();
-      // Reset form for next week
       setHohWinnerId('');
       setVetoWinnerId('');
       setEvictedId('');
@@ -246,8 +245,6 @@ export default function AdminPage() {
     );
   };
 
-  const activeHouseguests = houseguests.filter((h) => h.status === 'active');
-  // For editing past weeks, show all houseguests (evicted ones may have been active that week)
   const allHouseguests = houseguests;
 
   const loadWeekData = async (week: number) => {
@@ -281,47 +278,47 @@ export default function AdminPage() {
   };
 
   if (loading) {
-    return <div className="max-w-4xl mx-auto px-4 py-12 text-center text-gray-400">Loading...</div>;
+    return <div className="max-w-4xl mx-auto px-4 py-12 text-center text-slate-400">Loading...</div>;
   }
 
   // No season exists - show create form
   if (!season) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-6">Create a New Season</h1>
+        <h1 className="text-3xl font-bold text-blue-600 mb-6">Create a New Season</h1>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm text-gray-300 mb-1">Season Name</label>
+            <label className="block text-sm text-slate-700 mb-1">Season Name</label>
             <input
               type="text"
               value={seasonName}
               onChange={(e) => setSeasonName(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white"
+              className="w-full bg-white border border-slate-200 rounded-lg px-4 py-3 text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="e.g., Big Brother 27"
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-300 mb-1">Number of Houseguests</label>
+            <label className="block text-sm text-slate-700 mb-1">Number of Houseguests</label>
             <input
               type="number"
               value={houseguestCount}
               onChange={(e) => setHouseguestCount(Number(e.target.value))}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white"
+              className="w-full bg-white border border-slate-200 rounded-lg px-4 py-3 text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-300 mb-1">Admin Password</label>
+            <label className="block text-sm text-slate-700 mb-1">Admin Password</label>
             <input
               type="text"
               value={adminPass}
               onChange={(e) => setAdminPass(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white"
+              className="w-full bg-white border border-slate-200 rounded-lg px-4 py-3 text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Set an admin password"
             />
           </div>
           <button
             onClick={createSeason}
-            className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-lg transition"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition shadow-sm"
           >
             Create Season
           </button>
@@ -334,20 +331,20 @@ export default function AdminPage() {
   if (!authenticated) {
     return (
       <div className="max-w-md mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-6">Admin Login</h1>
+        <h1 className="text-3xl font-bold text-blue-600 mb-6">Admin Login</h1>
         <div className="space-y-4">
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white"
+            className="w-full bg-white border border-slate-200 rounded-lg px-4 py-3 text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Enter admin password"
           />
-          {authError && <p className="text-red-400 text-sm">{authError}</p>}
+          {authError && <p className="text-red-600 text-sm">{authError}</p>}
           <button
             onClick={handleLogin}
-            className="w-full bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-lg transition"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition shadow-sm"
           >
             Login
           </button>
@@ -359,8 +356,8 @@ export default function AdminPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-yellow-400">Admin Dashboard</h1>
-        <span className="text-gray-400">{season.name}</span>
+        <h1 className="text-3xl font-bold text-blue-600">Admin Dashboard</h1>
+        <span className="text-slate-500">{season.name}</span>
       </div>
 
       {/* Tabs */}
@@ -371,8 +368,8 @@ export default function AdminPage() {
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-lg font-medium transition ${
               activeTab === tab
-                ? 'bg-yellow-500 text-gray-900'
-                : 'bg-gray-800 text-gray-400 hover:text-white'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
             {tab === 'season' ? 'Season Setup' : tab === 'weekly' ? 'Weekly Results' : 'Brackets'}
@@ -383,65 +380,65 @@ export default function AdminPage() {
       {/* Season Setup */}
       {activeTab === 'season' && (
         <div className="space-y-8">
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <h2 className="text-xl font-bold text-white mb-4">Season Settings</h2>
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <h2 className="text-xl font-bold text-slate-900 mb-4">Season Settings</h2>
             <div className="grid sm:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm text-gray-300 mb-1">Season Name</label>
+                <label className="block text-sm text-slate-700 mb-1">Season Name</label>
                 <input
                   type="text"
                   value={seasonName}
                   onChange={(e) => setSeasonName(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-300 mb-1">Houseguest Count</label>
+                <label className="block text-sm text-slate-700 mb-1">Houseguest Count</label>
                 <input
                   type="number"
                   value={houseguestCount}
                   onChange={(e) => setHouseguestCount(Number(e.target.value))}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-300 mb-1">Admin Password</label>
+                <label className="block text-sm text-slate-700 mb-1">Admin Password</label>
                 <input
                   type="text"
                   value={adminPass}
                   onChange={(e) => setAdminPass(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={updateSeason}
-                className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-2 px-6 rounded-lg transition"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition shadow-sm"
               >
                 Save Settings
               </button>
               <button
                 onClick={toggleSubmissions}
-                className={`font-bold py-2 px-6 rounded-lg transition ${
+                className={`font-bold py-2 px-6 rounded-lg transition shadow-sm ${
                   season.submissions_locked
-                    ? 'bg-green-600 hover:bg-green-500 text-white'
-                    : 'bg-red-600 hover:bg-red-500 text-white'
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-red-600 hover:bg-red-700 text-white'
                 }`}
               >
                 {season.submissions_locked ? 'Unlock Submissions' : 'Lock Submissions'}
               </button>
               <button
                 onClick={recalculateAllScores}
-                className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition"
+                className="bg-white hover:bg-slate-50 text-slate-700 font-bold py-2 px-6 rounded-lg transition border border-slate-200 shadow-sm"
               >
                 Recalculate All Scores
               </button>
             </div>
           </div>
 
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <h2 className="text-xl font-bold text-white mb-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <h2 className="text-xl font-bold text-slate-900 mb-4">
               Houseguests ({houseguests.length})
             </h2>
             <div className="flex gap-2 mb-4">
@@ -449,7 +446,7 @@ export default function AdminPage() {
                 type="text"
                 value={newHouseguestName}
                 onChange={(e) => setNewHouseguestName(e.target.value)}
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                className="flex-1 bg-white border border-slate-200 rounded-lg px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Houseguest name"
                 onKeyDown={(e) => e.key === 'Enter' && addHouseguest()}
               />
@@ -457,12 +454,12 @@ export default function AdminPage() {
                 type="text"
                 value={newHouseguestPhoto}
                 onChange={(e) => setNewHouseguestPhoto(e.target.value)}
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                className="flex-1 bg-white border border-slate-200 rounded-lg px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Photo URL (optional)"
               />
               <button
                 onClick={addHouseguest}
-                className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-2 px-4 rounded-lg transition"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition shadow-sm"
               >
                 Add
               </button>
@@ -471,26 +468,26 @@ export default function AdminPage() {
               {houseguests.map((hg) => (
                 <div
                   key={hg.id}
-                  className="flex items-center justify-between bg-gray-800 rounded-lg px-4 py-2"
+                  className="flex items-center justify-between bg-slate-50 rounded-lg px-4 py-2 border border-slate-100"
                 >
                   <div className="flex items-center gap-3">
                     {hg.photo_url ? (
                       <img src={hg.photo_url} alt={hg.name} className="w-8 h-8 rounded-full object-cover" />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-sm font-bold">
+                      <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-sm font-bold">
                         {hg.name[0]}
                       </div>
                     )}
-                    <span className="text-white">{hg.name}</span>
+                    <span className="text-slate-900">{hg.name}</span>
                     <span
-                      className={`text-xs px-2 py-0.5 rounded ${
+                      className={`text-xs px-2 py-0.5 rounded border ${
                         hg.status === 'active'
-                          ? 'bg-green-900 text-green-300'
+                          ? 'bg-green-50 text-green-700 border-green-200'
                           : hg.status === 'winner'
-                          ? 'bg-yellow-900 text-yellow-300'
+                          ? 'bg-amber-50 text-amber-700 border-amber-200'
                           : hg.status === 'runner_up'
-                          ? 'bg-blue-900 text-blue-300'
-                          : 'bg-red-900 text-red-300'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : 'bg-red-50 text-red-700 border-red-200'
                       }`}
                     >
                       {hg.status}
@@ -498,7 +495,7 @@ export default function AdminPage() {
                   </div>
                   <button
                     onClick={() => removeHouseguest(hg.id)}
-                    className="text-red-400 hover:text-red-300 text-sm"
+                    className="text-red-600 hover:text-red-700 text-sm"
                   >
                     Remove
                   </button>
@@ -511,22 +508,22 @@ export default function AdminPage() {
 
       {/* Weekly Results */}
       {activeTab === 'weekly' && (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-          <h2 className="text-xl font-bold text-white mb-4">Enter Weekly Results</h2>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+          <h2 className="text-xl font-bold text-slate-900 mb-4">Enter Weekly Results</h2>
 
           <div className="mb-4">
-            <label className="block text-sm text-gray-300 mb-1">Week Number</label>
+            <label className="block text-sm text-slate-700 mb-1">Week Number</label>
             <div className="flex gap-2">
               <input
                 type="number"
                 min={1}
                 value={weekNumber}
                 onChange={(e) => setWeekNumber(Number(e.target.value))}
-                className="w-24 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                className="w-24 bg-white border border-slate-200 rounded-lg px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <button
                 onClick={() => loadWeekData(weekNumber)}
-                className="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition text-sm"
+                className="bg-white hover:bg-slate-50 text-slate-700 py-2 px-4 rounded-lg transition text-sm border border-slate-200 shadow-sm"
               >
                 Load Week
               </button>
@@ -535,15 +532,15 @@ export default function AdminPage() {
 
           {weeklyEvents.length > 0 && (
             <div className="mb-4 flex gap-2 flex-wrap">
-              <span className="text-sm text-gray-400 mr-2">Existing weeks:</span>
+              <span className="text-sm text-slate-500 mr-2">Existing weeks:</span>
               {weeklyEvents.map((e) => (
                 <button
                   key={e.id}
                   onClick={() => loadWeekData(e.week_number)}
                   className={`text-sm px-3 py-1 rounded-lg transition ${
                     weekNumber === e.week_number
-                      ? 'bg-yellow-500 text-gray-900'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
                   Week {e.week_number}
@@ -554,11 +551,11 @@ export default function AdminPage() {
 
           <div className="grid sm:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm text-gray-300 mb-1">HOH Winner</label>
+              <label className="block text-sm text-slate-700 mb-1">HOH Winner</label>
               <select
                 value={hohWinnerId}
                 onChange={(e) => setHohWinnerId(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">-- None --</option>
                 {allHouseguests.map((hg) => (
@@ -569,11 +566,11 @@ export default function AdminPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-300 mb-1">Veto Winner</label>
+              <label className="block text-sm text-slate-700 mb-1">Veto Winner</label>
               <select
                 value={vetoWinnerId}
                 onChange={(e) => setVetoWinnerId(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">-- None --</option>
                 {allHouseguests.map((hg) => (
@@ -586,11 +583,11 @@ export default function AdminPage() {
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm text-gray-300 mb-1">Evicted Houseguest</label>
+            <label className="block text-sm text-slate-700 mb-1">Evicted Houseguest</label>
             <select
               value={evictedId}
               onChange={(e) => setEvictedId(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+              className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">-- None --</option>
               {allHouseguests.map((hg) => (
@@ -602,7 +599,7 @@ export default function AdminPage() {
           </div>
 
           <div className="mb-6">
-            <label className="block text-sm text-gray-300 mb-2">
+            <label className="block text-sm text-slate-700 mb-2">
               Block Survivors (select all who survived the block this week)
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -611,20 +608,20 @@ export default function AdminPage() {
                   key={hg.id}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition ${
                     blockSurvivorIds.includes(hg.id)
-                      ? 'bg-yellow-500/20 border border-yellow-500'
-                      : 'bg-gray-800 border border-gray-700 hover:border-gray-600'
+                      ? 'bg-blue-50 border border-blue-400'
+                      : 'bg-slate-50 border border-slate-200 hover:border-slate-300'
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={blockSurvivorIds.includes(hg.id)}
                     onChange={() => toggleBlockSurvivor(hg.id)}
-                    className="accent-yellow-500"
+                    className="accent-blue-600"
                   />
-                  <span className="text-white text-sm">
+                  <span className="text-slate-900 text-sm">
                     {hg.name}
                     {hg.status !== 'active' && (
-                      <span className="text-gray-500 text-xs ml-1">({hg.status})</span>
+                      <span className="text-slate-400 text-xs ml-1">({hg.status})</span>
                     )}
                   </span>
                 </label>
@@ -633,7 +630,7 @@ export default function AdminPage() {
           </div>
 
           {weekMessage && (
-            <div className="mb-4 bg-green-900/50 border border-green-700 rounded-lg p-3 text-green-300 text-sm">
+            <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-700 text-sm">
               {weekMessage}
             </div>
           )}
@@ -641,13 +638,13 @@ export default function AdminPage() {
           <div className="flex gap-3">
             <button
               onClick={submitWeeklyResults}
-              className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-lg transition"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition shadow-sm"
             >
               Save Week {weekNumber} Results
             </button>
             <button
               onClick={clearWeek}
-              className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-8 rounded-lg transition"
+              className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition shadow-sm"
             >
               Clear Week {weekNumber}
             </button>
@@ -657,50 +654,50 @@ export default function AdminPage() {
 
       {/* Brackets Management */}
       {activeTab === 'brackets' && (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-          <h2 className="text-xl font-bold text-white mb-4">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+          <h2 className="text-xl font-bold text-slate-900 mb-4">
             Submitted Brackets ({brackets.length})
           </h2>
 
           {brackets.length === 0 ? (
-            <p className="text-gray-500">No brackets submitted yet.</p>
+            <p className="text-slate-400">No brackets submitted yet.</p>
           ) : (
             <div className="space-y-2">
               {brackets.map((b, i) => (
                 <div
                   key={b.id}
-                  className="flex items-center justify-between bg-gray-800 rounded-lg px-4 py-3"
+                  className="flex items-center justify-between bg-slate-50 rounded-lg px-4 py-3 border border-slate-100"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-gray-500 text-sm w-8">#{i + 1}</span>
+                    <span className="text-slate-400 text-sm w-8">#{i + 1}</span>
                     {editingBracketId === b.id ? (
                       <div className="flex gap-2">
                         <input
                           type="text"
                           value={editTeamName}
                           onChange={(e) => setEditTeamName(e.target.value)}
-                          className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-white text-sm"
+                          className="bg-white border border-slate-200 rounded px-3 py-1 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           onKeyDown={(e) => e.key === 'Enter' && saveTeamName(b.id)}
                         />
                         <button
                           onClick={() => saveTeamName(b.id)}
-                          className="text-green-400 hover:text-green-300 text-sm"
+                          className="text-green-600 hover:text-green-700 text-sm"
                         >
                           Save
                         </button>
                         <button
                           onClick={() => setEditingBracketId(null)}
-                          className="text-gray-400 hover:text-gray-300 text-sm"
+                          className="text-slate-400 hover:text-slate-600 text-sm"
                         >
                           Cancel
                         </button>
                       </div>
                     ) : (
-                      <span className="text-white">{b.team_name}</span>
+                      <span className="text-slate-900">{b.team_name}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-yellow-400 font-mono text-sm">
+                    <span className="text-blue-600 font-mono text-sm font-semibold">
                       {Number(b.total_score).toFixed(2)} pts
                     </span>
                     <button
@@ -708,13 +705,13 @@ export default function AdminPage() {
                         setEditingBracketId(b.id);
                         setEditTeamName(b.team_name);
                       }}
-                      className="text-blue-400 hover:text-blue-300 text-sm"
+                      className="text-blue-600 hover:text-blue-700 text-sm"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => deleteBracket(b.id)}
-                      className="text-red-400 hover:text-red-300 text-sm"
+                      className="text-red-600 hover:text-red-700 text-sm"
                     >
                       Delete
                     </button>

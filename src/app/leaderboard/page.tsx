@@ -93,41 +93,41 @@ export default function LeaderboardPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-12 text-center text-gray-400">Loading...</div>
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center text-slate-400">Loading...</div>
     );
   }
 
   if (!season) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-3xl font-bold text-white mb-4">No Active Season</h1>
-        <p className="text-gray-400">There is no active season right now.</p>
+        <h1 className="text-3xl font-bold text-slate-900 mb-4">No Active Season</h1>
+        <p className="text-slate-500">There is no active season right now.</p>
       </div>
     );
   }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold text-yellow-400 mb-2">Leaderboard</h1>
-      <p className="text-gray-400 mb-6">{season.name}</p>
+      <h1 className="text-3xl font-bold text-blue-600 mb-2">Leaderboard</h1>
+      <p className="text-slate-500 mb-6">{season.name}</p>
 
       <input
         type="text"
         placeholder="Search by team name..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent mb-6"
+        className="w-full bg-white border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-6 shadow-sm"
       />
 
       {filtered.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">
+        <p className="text-slate-400 text-center py-8">
           {brackets.length === 0 ? 'No brackets submitted yet.' : 'No matching teams found.'}
         </p>
       ) : (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-800 text-left text-sm text-gray-400">
+              <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
                 <th className="px-4 py-3 w-16">Rank</th>
                 <th className="px-4 py-3 w-16 text-center">+/-</th>
                 <th className="px-4 py-3">Team Name</th>
@@ -141,7 +141,7 @@ export default function LeaderboardPage() {
                 return (
                   <tr
                     key={bracket.id}
-                    className={`border-b border-gray-800/50 hover:bg-gray-800/50 transition ${
+                    className={`border-b border-slate-100 hover:bg-slate-50 transition ${
                       index < 3 ? 'font-semibold' : ''
                     }`}
                   >
@@ -149,12 +149,12 @@ export default function LeaderboardPage() {
                       <span
                         className={
                           globalRank === 1
-                            ? 'text-yellow-400'
+                            ? 'text-amber-500'
                             : globalRank === 2
-                            ? 'text-gray-300'
+                            ? 'text-slate-400'
                             : globalRank === 3
                             ? 'text-amber-600'
-                            : 'text-gray-500'
+                            : 'text-slate-400'
                         }
                       >
                         #{globalRank}
@@ -162,24 +162,24 @@ export default function LeaderboardPage() {
                     </td>
                     <td className="px-4 py-3 text-center text-sm font-mono">
                       {change === undefined || change === null ? (
-                        <span className="text-gray-600">&mdash;</span>
+                        <span className="text-slate-300">&mdash;</span>
                       ) : change > 0 ? (
-                        <span className="text-green-400">&uarr;+{change}</span>
+                        <span className="text-green-600">&uarr;+{change}</span>
                       ) : change < 0 ? (
-                        <span className="text-red-400">&darr;{change}</span>
+                        <span className="text-red-600">&darr;{change}</span>
                       ) : (
-                        <span className="text-gray-600">&mdash;</span>
+                        <span className="text-slate-300">&mdash;</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       <Link
                         href={`/team/${bracket.id}`}
-                        className="text-white hover:text-yellow-400 transition"
+                        className="text-slate-900 hover:text-blue-600 transition"
                       >
                         {bracket.team_name}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-yellow-400">
+                    <td className="px-4 py-3 text-right font-mono text-blue-600 font-semibold">
                       {bracket.total_score.toFixed(2)}
                     </td>
                   </tr>
@@ -190,7 +190,7 @@ export default function LeaderboardPage() {
         </div>
       )}
 
-      <p className="text-gray-500 text-sm mt-4 text-center">
+      <p className="text-slate-400 text-sm mt-4 text-center">
         {brackets.length} team{brackets.length !== 1 ? 's' : ''} total
       </p>
     </div>

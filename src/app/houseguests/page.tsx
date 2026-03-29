@@ -97,32 +97,32 @@ export default function HouseguestsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-12 text-center text-gray-400">Loading...</div>
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center text-slate-400">Loading...</div>
     );
   }
 
   if (!season) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-3xl font-bold text-white mb-4">No Active Season</h1>
-        <p className="text-gray-400">There is no active season right now.</p>
+        <h1 className="text-3xl font-bold text-slate-900 mb-4">No Active Season</h1>
+        <p className="text-slate-500">There is no active season right now.</p>
       </div>
     );
   }
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold text-yellow-400 mb-2">Houseguest Standings</h1>
-      <p className="text-gray-400 mb-6">{season.name} — Individual performance at 1x multiplier</p>
+      <h1 className="text-3xl font-bold text-blue-600 mb-2">Houseguest Standings</h1>
+      <p className="text-slate-500 mb-6">{season.name} — Individual performance at 1x multiplier</p>
 
       {standings.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">No houseguests found.</p>
+        <p className="text-slate-400 text-center py-8">No houseguests found.</p>
       ) : (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-800 text-left text-sm text-gray-400">
+                <tr className="border-b border-slate-200 text-left text-sm text-slate-500">
                   <th className="px-4 py-3 w-16">Rank</th>
                   <th className="px-4 py-3 w-16 text-center">+/-</th>
                   <th className="px-4 py-3">Name</th>
@@ -141,7 +141,7 @@ export default function HouseguestsPage() {
                   return (
                     <tr
                       key={s.houseguest.id}
-                      className={`border-b border-gray-800/50 hover:bg-gray-800/50 transition ${
+                      className={`border-b border-slate-100 hover:bg-slate-50 transition ${
                         rank <= 3 ? 'font-semibold' : ''
                       }`}
                     >
@@ -149,12 +149,12 @@ export default function HouseguestsPage() {
                         <span
                           className={
                             rank === 1
-                              ? 'text-yellow-400'
+                              ? 'text-amber-500'
                               : rank === 2
-                              ? 'text-gray-300'
+                              ? 'text-slate-400'
                               : rank === 3
                               ? 'text-amber-600'
-                              : 'text-gray-500'
+                              : 'text-slate-400'
                           }
                         >
                           #{rank}
@@ -162,24 +162,26 @@ export default function HouseguestsPage() {
                       </td>
                       <td className="px-4 py-3 text-center text-sm font-mono">
                         {change === undefined || change === null ? (
-                          <span className="text-gray-600">&mdash;</span>
+                          <span className="text-slate-300">&mdash;</span>
                         ) : change > 0 ? (
-                          <span className="text-green-400">&uarr;+{change}</span>
+                          <span className="text-green-600">&uarr;+{change}</span>
                         ) : change < 0 ? (
-                          <span className="text-red-400">&darr;{change}</span>
+                          <span className="text-red-600">&darr;{change}</span>
                         ) : (
-                          <span className="text-gray-600">&mdash;</span>
+                          <span className="text-slate-300">&mdash;</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-white">{s.houseguest.name}</td>
+                      <td className="px-4 py-3 text-slate-900">{s.houseguest.name}</td>
                       <td className="px-4 py-3 text-center">
                         <span
-                          className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          className={`text-xs font-medium px-2 py-1 rounded-full border ${
                             s.houseguest.status === 'active'
-                              ? 'bg-green-900/50 text-green-400'
+                              ? 'bg-green-50 text-green-700 border-green-200'
                               : s.houseguest.status === 'evicted'
-                              ? 'bg-red-900/50 text-red-400'
-                              : 'bg-yellow-900/50 text-yellow-400'
+                              ? 'bg-red-50 text-red-700 border-red-200'
+                              : s.houseguest.status === 'winner'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-blue-50 text-blue-700 border-blue-200'
                           }`}
                         >
                           {s.houseguest.status === 'runner_up'
@@ -187,19 +189,19 @@ export default function HouseguestsPage() {
                             : s.houseguest.status.charAt(0).toUpperCase() + s.houseguest.status.slice(1)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-300">
+                      <td className="px-4 py-3 text-right font-mono text-slate-600">
                         {s.hoh_wins}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-300">
+                      <td className="px-4 py-3 text-right font-mono text-slate-600">
                         {s.veto_wins}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-300">
+                      <td className="px-4 py-3 text-right font-mono text-slate-600">
                         {s.block_survivals}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-300">
+                      <td className="px-4 py-3 text-right font-mono text-slate-600">
                         {s.placement_points}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-yellow-400">
+                      <td className="px-4 py-3 text-right font-mono text-blue-600 font-semibold">
                         {s.base_score}
                       </td>
                     </tr>
@@ -211,7 +213,7 @@ export default function HouseguestsPage() {
         </div>
       )}
 
-      <p className="text-gray-500 text-sm mt-4 text-center">
+      <p className="text-slate-400 text-sm mt-4 text-center">
         {standings.length} houseguest{standings.length !== 1 ? 's' : ''} total
       </p>
     </div>
