@@ -46,6 +46,9 @@ export default function RootLayout({
               <Link href="/compare" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 px-2 py-1 rounded-lg hover:bg-gray-800/50">
                 Compare
               </Link>
+              <Link href="/forecast" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 px-2 py-1 rounded-lg hover:bg-gray-800/50">
+                Forecast
+              </Link>
               <Link href="/submit" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 px-2 py-1 rounded-lg hover:bg-gray-800/50">
                 Submit
               </Link>
