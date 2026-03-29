@@ -14,12 +14,12 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-// Distinct colors for lines — bold, visible on white
+// Distinct colors for lines
 const LINE_COLORS = [
-  '#2563eb', '#dc2626', '#16a34a', '#9333ea', '#ea580c',
-  '#0891b2', '#d946ef', '#ca8a04', '#4f46e5', '#059669',
-  '#e11d48', '#0284c7', '#7c3aed', '#c2410c', '#0d9488',
-  '#6d28d9', '#b91c1c', '#1d4ed8', '#15803d', '#a21caf',
+  '#facc15', '#f87171', '#60a5fa', '#34d399', '#c084fc',
+  '#fb923c', '#22d3ee', '#e879f9', '#a3e635', '#fbbf24',
+  '#f472b6', '#38bdf8', '#4ade80', '#a78bfa', '#fb7185',
+  '#2dd4bf', '#fcd34d', '#818cf8', '#86efac', '#fdba74',
 ];
 
 interface RankedBracket {
@@ -115,7 +115,7 @@ export default function TrendsPage() {
     load();
   }, []);
 
-  // === Team chart data ===
+  // === Team chart data (unchanged logic) ===
   const teamChartData = useMemo(() => {
     const weekMap = new Map<number, Map<string, WeeklyRanking>>();
     for (const r of rankings) {
@@ -133,12 +133,13 @@ export default function TrendsPage() {
     });
   }, [rankings]);
 
-  // === Houseguest chart data ===
+  // === Houseguest chart data (computed from events) ===
   const houseguestChartData = useMemo(() => {
     if (weeklyEvents.length === 0 || houseguests.length === 0) return [];
 
     const weeks = [...new Set(weeklyEvents.map((e) => e.week_number))].sort((a, b) => a - b);
 
+    // Build a map of houseguest id -> eviction week
     const evictionWeekMap = new Map<string, number>();
     for (const event of weeklyEvents) {
       if (event.evicted_houseguest_id) {
@@ -146,6 +147,7 @@ export default function TrendsPage() {
       }
     }
 
+    // Build a map of event id -> week number for filtering block survivors
     const eventWeekMap = new Map<string, number>();
     for (const event of weeklyEvents) {
       eventWeekMap.set(event.id, event.week_number);
@@ -156,16 +158,19 @@ export default function TrendsPage() {
     return weeks.map((week) => {
       const entry: Record<string, number | string> = { week: `Wk ${week}` };
 
+      // Events and survivors up to this week
       const eventsUpToWeek = weeklyEvents.filter((e) => e.week_number <= week);
       const survivorsUpToWeek = blockSurvivors.filter((bs) => {
         const eventWeek = eventWeekMap.get(bs.weekly_event_id);
         return eventWeek !== undefined && eventWeek <= week;
       });
 
+      // Count evicted up to this week
       const evictedCountAtWeek = eventsUpToWeek.filter((e) => e.evicted_houseguest_id).length;
 
       for (const hg of houseguests) {
         const evictionWeek = evictionWeekMap.get(hg.id);
+        // Include houseguest up to and including their eviction week
         if (evictionWeek !== undefined && week > evictionWeek) continue;
 
         const stats = getHouseguestStats(hg, eventsUpToWeek, survivorsUpToWeek, totalHouseguests, evictedCountAtWeek);
@@ -176,7 +181,7 @@ export default function TrendsPage() {
     });
   }, [weeklyEvents, blockSurvivors, houseguests, season]);
 
-  // Sorted houseguest list: active first, then evicted
+  // Sorted houseguest list: active first (by score desc), then evicted (by score desc)
   const sortedHouseguests = useMemo(() => {
     if (weeklyEvents.length === 0 || houseguests.length === 0) return [];
 
@@ -213,40 +218,48 @@ export default function TrendsPage() {
   }, [sortedHouseguests]);
 
   // Team selection helpers
-  function selectAllTeams() { setSelectedTeams(new Set(brackets.map((b) => b.id))); }
-  function deselectAllTeams() { setSelectedTeams(new Set()); }
+  function selectAllTeams() {
+    setSelectedTeams(new Set(brackets.map((b) => b.id)));
+  }
+  function deselectAllTeams() {
+    setSelectedTeams(new Set());
+  }
   function toggleTeam(id: string) {
-    setSelectedTeams((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+    setSelectedTeams((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   // Houseguest selection helpers
-  function selectAllHouseguests() { setSelectedHouseguests(new Set(sortedHouseguests.map((h) => h.id))); }
-  function deselectAllHouseguests() { setSelectedHouseguests(new Set()); }
-  function toggleHouseguest(id: string) {
-    setSelectedHouseguests((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  function selectAllHouseguests() {
+    setSelectedHouseguests(new Set(sortedHouseguests.map((h) => h.id)));
   }
-
-  // Shared chart styles
-  const tooltipStyle = {
-    backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '8px',
-    color: '#0f172a',
-    fontSize: '13px',
-    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-  };
+  function deselectAllHouseguests() {
+    setSelectedHouseguests(new Set());
+  }
+  function toggleHouseguest(id: string) {
+    setSelectedHouseguests((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-12 text-center text-slate-400">Loading...</div>
+      <div className="max-w-6xl mx-auto px-4 py-12 text-center text-gray-400">Loading...</div>
     );
   }
 
   if (!season) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-3xl font-bold text-slate-900 mb-4">No Active Season</h1>
-        <p className="text-slate-500">There is no active season right now.</p>
+        <h1 className="text-3xl font-bold text-white mb-4">No Active Season</h1>
+        <p className="text-gray-400">There is no active season right now.</p>
       </div>
     );
   }
@@ -256,8 +269,8 @@ export default function TrendsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold text-blue-600 mb-2">Ranking Trends</h1>
-      <p className="text-slate-500 mb-6">{season.name} &mdash; Week-by-week performance</p>
+      <h1 className="text-3xl font-bold text-yellow-400 mb-2">Ranking Trends</h1>
+      <p className="text-gray-400 mb-6">{season.name} &mdash; Week-by-week performance</p>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-8">
@@ -265,8 +278,8 @@ export default function TrendsPage() {
           onClick={() => setActiveTab('teams')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
             activeTab === 'teams'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              ? 'bg-yellow-400 text-gray-900'
+              : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
           }`}
         >
           Team Trends
@@ -275,8 +288,8 @@ export default function TrendsPage() {
           onClick={() => setActiveTab('houseguests')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
             activeTab === 'houseguests'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              ? 'bg-yellow-400 text-gray-900'
+              : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
           }`}
         >
           Houseguest Trends
@@ -286,33 +299,33 @@ export default function TrendsPage() {
       {/* Team Trends Tab */}
       {activeTab === 'teams' && (
         !hasTeamData ? (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
-            <p className="text-slate-400 text-lg">No weekly results have been entered yet.</p>
-            <p className="text-slate-300 text-sm mt-2">
+          <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
+            <p className="text-gray-500 text-lg">No weekly results have been entered yet.</p>
+            <p className="text-gray-600 text-sm mt-2">
               Trend data will appear after the admin enters the first week&apos;s results.
             </p>
           </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-6">
-            <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm p-4 min-h-[400px]">
+            <div className="flex-1 bg-gray-900 rounded-xl border border-gray-800 p-4 min-h-[400px]">
               <ResponsiveContainer width="100%" height={450}>
                 <LineChart data={teamChartData} margin={{ top: 10, right: 20, bottom: 10, left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="week" stroke="#94a3b8" tick={{ fill: '#64748b', fontSize: 12 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="week" stroke="#9ca3af" tick={{ fill: '#9ca3af', fontSize: 12 }} />
                   <YAxis
-                    stroke="#94a3b8"
-                    tick={{ fill: '#64748b', fontSize: 12 }}
+                    stroke="#9ca3af"
+                    tick={{ fill: '#9ca3af', fontSize: 12 }}
                     allowDecimals={false}
-                    label={{ value: 'Total Points', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 12 }}
+                    label={{ value: 'Total Points', angle: -90, position: 'insideLeft', fill: '#9ca3af', fontSize: 12 }}
                   />
                   <Tooltip
-                    contentStyle={tooltipStyle}
+                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#fff', fontSize: '13px' }}
                     formatter={(value, name) => {
                       const team = brackets.find((b) => b.id === String(name));
                       return [`${value} pts`, team?.team_name || String(name)];
                     }}
                     itemSorter={(item) => -(item.value as number)}
-                    labelStyle={{ color: '#64748b' }}
+                    labelStyle={{ color: '#9ca3af' }}
                   />
                   {brackets
                     .filter((b) => selectedTeams.has(b.id))
@@ -332,19 +345,19 @@ export default function TrendsPage() {
               </ResponsiveContainer>
             </div>
 
-            <div className="lg:w-64 bg-white rounded-xl border border-slate-200 shadow-sm p-4 self-start">
-              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Teams</h2>
+            <div className="lg:w-64 bg-gray-900 rounded-xl border border-gray-800 p-4 self-start">
+              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Teams</h2>
               <div className="flex gap-2 mb-4">
-                <button onClick={selectAllTeams} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded transition">Select All</button>
-                <button onClick={deselectAllTeams} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded transition">Deselect All</button>
+                <button onClick={selectAllTeams} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition">Select All</button>
+                <button onClick={deselectAllTeams} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition">Deselect All</button>
               </div>
               <div className="space-y-1.5 max-h-[500px] overflow-y-auto">
                 {brackets.map((b) => (
-                  <label key={b.id} className="flex items-center gap-2.5 cursor-pointer hover:bg-slate-50 rounded px-2 py-1.5 transition">
-                    <input type="checkbox" checked={selectedTeams.has(b.id)} onChange={() => toggleTeam(b.id)} className="accent-blue-600 w-4 h-4 rounded" />
+                  <label key={b.id} className="flex items-center gap-2.5 cursor-pointer hover:bg-gray-800/50 rounded px-2 py-1.5 transition">
+                    <input type="checkbox" checked={selectedTeams.has(b.id)} onChange={() => toggleTeam(b.id)} className="accent-yellow-400 w-4 h-4 rounded" />
                     <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: teamColorMap.get(b.id) }} />
-                    <span className="text-sm text-slate-700 truncate flex-1">{b.team_name}</span>
-                    <span className="text-xs text-slate-400 flex-shrink-0">#{b.current_rank}</span>
+                    <span className="text-sm text-gray-300 truncate flex-1">{b.team_name}</span>
+                    <span className="text-xs text-gray-500 flex-shrink-0">#{b.current_rank}</span>
                   </label>
                 ))}
               </div>
@@ -356,33 +369,33 @@ export default function TrendsPage() {
       {/* Houseguest Trends Tab */}
       {activeTab === 'houseguests' && (
         !hasHouseguestData ? (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
-            <p className="text-slate-400 text-lg">No weekly results have been entered yet.</p>
-            <p className="text-slate-300 text-sm mt-2">
+          <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
+            <p className="text-gray-500 text-lg">No weekly results have been entered yet.</p>
+            <p className="text-gray-600 text-sm mt-2">
               Houseguest trends will appear after the admin enters the first week&apos;s results.
             </p>
           </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-6">
-            <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm p-4 min-h-[400px]">
+            <div className="flex-1 bg-gray-900 rounded-xl border border-gray-800 p-4 min-h-[400px]">
               <ResponsiveContainer width="100%" height={450}>
                 <LineChart data={houseguestChartData} margin={{ top: 10, right: 20, bottom: 10, left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="week" stroke="#94a3b8" tick={{ fill: '#64748b', fontSize: 12 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="week" stroke="#9ca3af" tick={{ fill: '#9ca3af', fontSize: 12 }} />
                   <YAxis
-                    stroke="#94a3b8"
-                    tick={{ fill: '#64748b', fontSize: 12 }}
+                    stroke="#9ca3af"
+                    tick={{ fill: '#9ca3af', fontSize: 12 }}
                     allowDecimals={false}
-                    label={{ value: 'Total Points', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 12 }}
+                    label={{ value: 'Total Points', angle: -90, position: 'insideLeft', fill: '#9ca3af', fontSize: 12 }}
                   />
                   <Tooltip
-                    contentStyle={tooltipStyle}
+                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#fff', fontSize: '13px' }}
                     formatter={(value, name) => {
                       const hg = sortedHouseguests.find((h) => h.id === String(name));
                       return [`${value} pts`, hg?.name || String(name)];
                     }}
                     itemSorter={(item) => -(item.value as number)}
-                    labelStyle={{ color: '#64748b' }}
+                    labelStyle={{ color: '#9ca3af' }}
                   />
                   {sortedHouseguests
                     .filter((h) => selectedHouseguests.has(h.id))
@@ -402,19 +415,19 @@ export default function TrendsPage() {
               </ResponsiveContainer>
             </div>
 
-            <div className="lg:w-64 bg-white rounded-xl border border-slate-200 shadow-sm p-4 self-start">
-              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Houseguests</h2>
+            <div className="lg:w-64 bg-gray-900 rounded-xl border border-gray-800 p-4 self-start">
+              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Houseguests</h2>
               <div className="flex gap-2 mb-4">
-                <button onClick={selectAllHouseguests} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded transition">Select All</button>
-                <button onClick={deselectAllHouseguests} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded transition">Deselect All</button>
+                <button onClick={selectAllHouseguests} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition">Select All</button>
+                <button onClick={deselectAllHouseguests} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition">Deselect All</button>
               </div>
               <div className="space-y-1.5 max-h-[500px] overflow-y-auto">
                 {sortedHouseguests.map((h) => (
-                  <label key={h.id} className="flex items-center gap-2.5 cursor-pointer hover:bg-slate-50 rounded px-2 py-1.5 transition">
-                    <input type="checkbox" checked={selectedHouseguests.has(h.id)} onChange={() => toggleHouseguest(h.id)} className="accent-blue-600 w-4 h-4 rounded" />
+                  <label key={h.id} className="flex items-center gap-2.5 cursor-pointer hover:bg-gray-800/50 rounded px-2 py-1.5 transition">
+                    <input type="checkbox" checked={selectedHouseguests.has(h.id)} onChange={() => toggleHouseguest(h.id)} className="accent-yellow-400 w-4 h-4 rounded" />
                     <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: hgColorMap.get(h.id) }} />
-                    <span className="text-sm text-slate-700 truncate flex-1">{h.name}</span>
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${h.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span className="text-sm text-gray-300 truncate flex-1">{h.name}</span>
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${h.status === 'active' ? 'bg-green-400' : 'bg-red-400'}`} />
                   </label>
                 ))}
               </div>

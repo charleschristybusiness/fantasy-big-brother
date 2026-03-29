@@ -97,7 +97,7 @@ export default function SubmitBracketPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-12 text-center text-slate-400">
+      <div className="max-w-2xl mx-auto px-4 py-12 text-center text-gray-400">
         Loading...
       </div>
     );
@@ -106,8 +106,8 @@ export default function SubmitBracketPage() {
   if (!season) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-3xl font-bold text-slate-900 mb-4">No Active Season</h1>
-        <p className="text-slate-500">There is no active season right now. Check back later!</p>
+        <h1 className="text-3xl font-bold text-white mb-4">No Active Season</h1>
+        <p className="text-gray-400">There is no active season right now. Check back later!</p>
       </div>
     );
   }
@@ -115,8 +115,8 @@ export default function SubmitBracketPage() {
   if (season.submissions_locked) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-3xl font-bold text-slate-900 mb-4">Submissions Locked</h1>
-        <p className="text-blue-600">
+        <h1 className="text-3xl font-bold text-white mb-4">Submissions Locked</h1>
+        <p className="text-yellow-500">
           Bracket submissions are currently locked. The season has already begun!
         </p>
       </div>
@@ -127,36 +127,36 @@ export default function SubmitBracketPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold text-blue-600 mb-2">Submit Your Bracket</h1>
-      <p className="text-slate-500 mb-8">{season.name}</p>
+      <h1 className="text-3xl font-bold text-yellow-400 mb-2">Submit Your Bracket</h1>
+      <p className="text-gray-400 mb-8">{season.name}</p>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
             Team Name
           </label>
           <input
             type="text"
             value={teamName}
             onChange={(e) => setTeamName(e.target.value)}
-            className="w-full bg-white border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
             placeholder="Enter your team name"
             maxLength={50}
           />
         </div>
 
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">Select Your 5 Houseguests</h2>
+          <h2 className="text-lg font-semibold text-white">Select Your 5 Houseguests</h2>
           {[0, 1, 2, 3, 4].map((index) => (
             <div key={index}>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 Pick #{index + 1}{' '}
-                <span className="text-blue-600">({multipliers[index]} multiplier)</span>
+                <span className="text-yellow-400">({multipliers[index]} multiplier)</span>
               </label>
               <select
                 value={picks[index]}
                 onChange={(e) => handlePickChange(index, e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
               >
                 <option value="">-- Select a houseguest --</option>
                 {getAvailableHouseguests(index).map((hg) => (
@@ -170,7 +170,7 @@ export default function SubmitBracketPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          <div className="bg-red-900/50 border border-red-700 rounded-lg p-4 text-red-300">
             {error}
           </div>
         )}
@@ -178,7 +178,7 @@ export default function SubmitBracketPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-3 px-8 rounded-lg text-lg transition shadow-sm"
+          className="w-full bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-600 disabled:cursor-not-allowed text-gray-900 font-bold py-3 px-8 rounded-lg text-lg transition"
         >
           {submitting ? 'Submitting...' : 'Submit Bracket'}
         </button>

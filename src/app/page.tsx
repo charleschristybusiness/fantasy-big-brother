@@ -17,13 +17,13 @@ export default async function HomePage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
       <div className="text-center mb-12">
-        <h1 className="text-5xl font-bold text-blue-600 mb-4">
+        <h1 className="text-5xl font-bold text-yellow-400 mb-4">
           Fantasy Big Brother
         </h1>
         {s ? (
-          <p className="text-2xl text-slate-600">{s.name}</p>
+          <p className="text-2xl text-gray-300">{s.name}</p>
         ) : (
-          <p className="text-xl text-slate-400">No active season. Check back soon!</p>
+          <p className="text-xl text-gray-400">No active season. Check back soon!</p>
         )}
       </div>
 
@@ -32,58 +32,58 @@ export default async function HomePage() {
           {!s.submissions_locked && (
             <Link
               href="/submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition text-center shadow-sm"
+              className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg transition text-center"
             >
               Submit Your Bracket
             </Link>
           )}
           <Link
             href="/leaderboard"
-            className="bg-white hover:bg-slate-50 text-slate-700 font-bold py-3 px-8 rounded-lg text-lg transition text-center border border-slate-200 shadow-sm"
+            className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg text-lg transition text-center"
           >
             View Leaderboard
           </Link>
         </div>
       )}
 
-      <div className="bg-white rounded-xl p-8 border border-slate-200 shadow-sm">
-        <h2 className="text-2xl font-bold text-blue-600 mb-6">How It Works</h2>
+      <div className="bg-gray-900 rounded-xl p-8 border border-gray-800">
+        <h2 className="text-2xl font-bold text-yellow-400 mb-6">How It Works</h2>
 
         <div className="grid md:grid-cols-3 gap-8 mb-8">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">1. Draft Your Team</h3>
-            <p className="text-slate-500">
+            <h3 className="text-lg font-semibold text-white mb-2">1. Draft Your Team</h3>
+            <p className="text-gray-400">
               Pick 5 houseguests ranked 1st through 5th. Your #1 pick earns 1.5x points,
               while your #5 pick earns 0.5x.
             </p>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">2. Earn Points</h3>
-            <p className="text-slate-500">
+            <h3 className="text-lg font-semibold text-white mb-2">2. Earn Points</h3>
+            <p className="text-gray-400">
               Your picks earn points throughout the season based on their performance
               in competitions and how far they make it.
             </p>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">3. Win the League</h3>
-            <p className="text-slate-500">
+            <h3 className="text-lg font-semibold text-white mb-2">3. Win the League</h3>
+            <p className="text-gray-400">
               Check the leaderboard each week to see how your team stacks up
               against everyone else!
             </p>
           </div>
         </div>
 
-        <h3 className="text-xl font-bold text-slate-900 mb-4">Scoring</h3>
+        <h3 className="text-xl font-bold text-white mb-4">Scoring</h3>
         <div className="grid sm:grid-cols-2 gap-6">
           <div>
-            <h4 className="font-semibold text-blue-600 mb-2">Weekly Events (Base Points)</h4>
+            <h4 className="font-semibold text-yellow-400 mb-2">Weekly Events (Base Points)</h4>
             <table className="w-full text-sm">
-              <tbody className="text-slate-600">
-                <tr className="border-b border-slate-200">
+              <tbody className="text-gray-300">
+                <tr className="border-b border-gray-800">
                   <td className="py-2">HOH Win</td>
                   <td className="py-2 text-right font-mono">7 pts</td>
                 </tr>
-                <tr className="border-b border-slate-200">
+                <tr className="border-b border-gray-800">
                   <td className="py-2">Veto Win</td>
                   <td className="py-2 text-right font-mono">5 pts</td>
                 </tr>
@@ -95,11 +95,11 @@ export default async function HomePage() {
             </table>
           </div>
           <div>
-            <h4 className="font-semibold text-blue-600 mb-2">Draft Multipliers</h4>
+            <h4 className="font-semibold text-yellow-400 mb-2">Draft Multipliers</h4>
             <table className="w-full text-sm">
-              <tbody className="text-slate-600">
+              <tbody className="text-gray-300">
                 {(['1st', '2nd', '3rd', '4th', '5th'] as const).map((pos, i) => (
-                  <tr key={pos} className={i < 4 ? 'border-b border-slate-200' : ''}>
+                  <tr key={pos} className={i < 4 ? 'border-b border-gray-800' : ''}>
                     <td className="py-2">{pos} Pick</td>
                     <td className="py-2 text-right font-mono">{[1.5, 1.25, 1.0, 0.75, 0.5][i]}x</td>
                   </tr>
@@ -110,8 +110,8 @@ export default async function HomePage() {
         </div>
 
         <div className="mt-6">
-          <h4 className="font-semibold text-blue-600 mb-2">Placement Points</h4>
-          <p className="text-slate-500 text-sm mb-2">
+          <h4 className="font-semibold text-yellow-400 mb-2">Placement Points</h4>
+          <p className="text-gray-400 text-sm mb-2">
             Points awarded based on final finish (also multiplied by draft position):
           </p>
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 text-xs text-center">
@@ -121,9 +121,9 @@ export default async function HomePage() {
               ['9th', '15'], ['10th', '12'], ['11th', '10'], ['12th', '8'],
               ['13th', '6'], ['14th', '4'], ['15th', '2'], ['16th', '0'],
             ].map(([place, pts]) => (
-              <div key={place} className="bg-slate-50 rounded p-2 border border-slate-100">
-                <div className="text-slate-400">{place}</div>
-                <div className="text-slate-900 font-mono">{pts}</div>
+              <div key={place} className="bg-gray-800 rounded p-2">
+                <div className="text-gray-400">{place}</div>
+                <div className="text-white font-mono">{pts}</div>
               </div>
             ))}
           </div>
@@ -132,7 +132,7 @@ export default async function HomePage() {
 
       {s?.submissions_locked && (
         <div className="mt-8 text-center">
-          <p className="text-blue-600 text-lg font-semibold">
+          <p className="text-yellow-500 text-lg font-semibold">
             Bracket submissions are currently locked.
           </p>
         </div>
