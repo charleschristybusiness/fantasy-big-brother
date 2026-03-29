@@ -11,9 +11,21 @@ function LeaderboardSkeleton() {
     <div className="max-w-5xl mx-auto px-4 py-12">
       <div className="h-9 w-48 animate-pulse bg-gray-800 rounded-lg mb-2" />
       <div className="h-5 w-32 animate-pulse bg-gray-800 rounded mb-6" />
-      <div className="h-12 w-full animate-pulse bg-gray-800 rounded-lg mb-6" />
+      <div className="h-12 w-full animate-pulse bg-gray-800 rounded-lg mb-8" />
+      {/* Podium skeleton */}
+      <div className="grid grid-cols-3 items-end gap-4 mb-10">
+        <div className="pt-8">
+          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 h-40 animate-pulse" />
+        </div>
+        <div>
+          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 h-48 animate-pulse" />
+        </div>
+        <div className="pt-12">
+          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 h-36 animate-pulse" />
+        </div>
+      </div>
       <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-        {Array.from({ length: 8 }).map((_, i) => (
+        {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="flex items-center gap-4 px-4 py-4 border-b border-gray-800/50">
             <div className="h-5 w-10 animate-pulse bg-gray-800 rounded" />
             <div className="h-5 w-10 animate-pulse bg-gray-800 rounded" />
@@ -24,6 +36,19 @@ function LeaderboardSkeleton() {
       </div>
     </div>
   );
+}
+
+function RankChangeDisplay({ change }: { change: number | null | undefined }) {
+  if (change === undefined || change === null) {
+    return <span className="text-gray-600">&mdash;</span>;
+  }
+  if (change > 0) {
+    return <span className="text-green-400 font-bold">&uarr;{change}</span>;
+  }
+  if (change < 0) {
+    return <span className="text-red-400 font-bold">&darr;{change}</span>;
+  }
+  return <span className="text-gray-600">&mdash;</span>;
 }
 
 export default function LeaderboardPage() {
@@ -110,6 +135,9 @@ export default function LeaderboardPage() {
     ? brackets.filter((b) => b.team_name.toLowerCase().includes(search.toLowerCase()))
     : brackets;
 
+  const showPodium = !search && brackets.length >= 3;
+  const tableData = showPodium ? filtered.slice(3) : filtered;
+
   if (loading) {
     return <LeaderboardSkeleton />;
   }
@@ -123,6 +151,11 @@ export default function LeaderboardPage() {
     );
   }
 
+  // Top 3 for podium
+  const first = brackets[0];
+  const second = brackets[1];
+  const third = brackets[2];
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
       <div className="mb-8">
@@ -130,7 +163,7 @@ export default function LeaderboardPage() {
         <p className="text-gray-400">{season.name}</p>
       </div>
 
-      <div className="relative mb-6">
+      <div className="relative mb-8">
         <input
           type="text"
           placeholder="Search by team name..."
@@ -140,13 +173,76 @@ export default function LeaderboardPage() {
         />
       </div>
 
+      {/* Podium - Top 3 */}
+      {showPodium && (
+        <div className="grid grid-cols-3 items-end gap-3 sm:gap-5 mb-10">
+          {/* #2 - Silver (Left) */}
+          <div className="pt-6 sm:pt-8">
+            <div className="bg-gray-900 rounded-xl border border-gray-400/20 p-4 sm:p-6 text-center hover:border-gray-400/40 transition-all duration-300 group">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-400/10 border-2 border-gray-400/40 flex items-center justify-center mx-auto mb-3">
+                <span className="text-gray-300 font-bold text-lg sm:text-xl font-mono">2</span>
+              </div>
+              <Link href={`/team/${second.id}`} className="text-white hover:text-gray-300 transition-colors duration-200 block">
+                <h3 className="font-semibold text-sm sm:text-base truncate">{second.team_name}</h3>
+              </Link>
+              <div className="text-xl sm:text-2xl font-bold font-mono text-gray-300 mt-2">
+                {second.total_score.toFixed(2)}
+              </div>
+              <div className="text-sm font-mono mt-1">
+                <RankChangeDisplay change={rankChanges.get(second.id)} />
+              </div>
+            </div>
+          </div>
+
+          {/* #1 - Gold (Center) */}
+          <div>
+            <div className="bg-gray-900 rounded-xl border border-yellow-500/30 p-5 sm:p-7 text-center shadow-[0_0_25px_rgba(250,204,21,0.12)] hover:shadow-[0_0_35px_rgba(250,204,21,0.2)] transition-all duration-300 group relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-b from-yellow-500/5 via-transparent to-transparent" />
+              <div className="relative">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-yellow-500/15 border-2 border-yellow-500/50 flex items-center justify-center mx-auto mb-3">
+                  <span className="text-yellow-400 font-bold text-xl sm:text-2xl font-mono">1</span>
+                </div>
+                <Link href={`/team/${first.id}`} className="text-white hover:text-yellow-400 transition-colors duration-200 block">
+                  <h3 className="font-bold text-base sm:text-lg truncate">{first.team_name}</h3>
+                </Link>
+                <div className="text-2xl sm:text-3xl font-bold font-mono text-yellow-400 mt-2">
+                  {first.total_score.toFixed(2)}
+                </div>
+                <div className="text-sm font-mono mt-1">
+                  <RankChangeDisplay change={rankChanges.get(first.id)} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* #3 - Bronze (Right) */}
+          <div className="pt-10 sm:pt-12">
+            <div className="bg-gray-900 rounded-xl border border-amber-600/20 p-4 sm:p-5 text-center hover:border-amber-600/40 transition-all duration-300 group">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-amber-600/10 border-2 border-amber-600/40 flex items-center justify-center mx-auto mb-3">
+                <span className="text-amber-500 font-bold text-lg sm:text-xl font-mono">3</span>
+              </div>
+              <Link href={`/team/${third.id}`} className="text-white hover:text-amber-400 transition-colors duration-200 block">
+                <h3 className="font-semibold text-sm sm:text-base truncate">{third.team_name}</h3>
+              </Link>
+              <div className="text-lg sm:text-xl font-bold font-mono text-amber-500 mt-2">
+                {third.total_score.toFixed(2)}
+              </div>
+              <div className="text-sm font-mono mt-1">
+                <RankChangeDisplay change={rankChanges.get(third.id)} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
       {filtered.length === 0 ? (
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
           <p className="text-gray-500 text-lg">
             {brackets.length === 0 ? 'No brackets submitted yet.' : 'No matching teams found.'}
           </p>
         </div>
-      ) : (
+      ) : tableData.length > 0 ? (
         <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
           <table className="w-full">
             <thead>
@@ -158,45 +254,30 @@ export default function LeaderboardPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((bracket, index) => {
+              {tableData.map((bracket) => {
                 const globalRank = brackets.indexOf(bracket) + 1;
                 const change = rankChanges.get(bracket.id);
-                const isTop1 = globalRank === 1;
-                const isTop3 = globalRank <= 3;
+
+                // Left border accent based on rank
+                const borderAccent =
+                  globalRank <= 10
+                    ? 'border-l-2 border-l-cyan-500/30'
+                    : globalRank <= 20
+                    ? 'border-l-2 border-l-cyan-500/15'
+                    : 'border-l-2 border-l-transparent';
+
                 return (
                   <tr
                     key={bracket.id}
-                    className={`border-b border-gray-800/50 transition-all duration-200 ${
-                      isTop1
-                        ? 'bg-yellow-500/5 hover:bg-yellow-500/10'
-                        : 'hover:bg-gray-800/50'
-                    } ${isTop3 ? 'font-semibold' : ''}`}
+                    className={`border-b border-gray-800/50 transition-all duration-200 hover:bg-gray-800/50 ${borderAccent}`}
                   >
                     <td className="px-4 py-3.5">
-                      <span
-                        className={`font-mono ${
-                          globalRank === 1
-                            ? 'text-yellow-400'
-                            : globalRank === 2
-                            ? 'text-gray-300'
-                            : globalRank === 3
-                            ? 'text-amber-600'
-                            : 'text-gray-500'
-                        }`}
-                      >
+                      <span className="font-mono text-gray-500">
                         #{globalRank}
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-center text-sm font-mono">
-                      {change === undefined || change === null ? (
-                        <span className="text-gray-600">&mdash;</span>
-                      ) : change > 0 ? (
-                        <span className="text-green-400 font-bold">&uarr;{change}</span>
-                      ) : change < 0 ? (
-                        <span className="text-red-400 font-bold">&darr;{change}</span>
-                      ) : (
-                        <span className="text-gray-600">&mdash;</span>
-                      )}
+                      <RankChangeDisplay change={change} />
                     </td>
                     <td className="px-4 py-3.5">
                       <Link
@@ -215,7 +296,7 @@ export default function LeaderboardPage() {
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
 
       <p className="text-gray-500 text-sm mt-4 text-center font-mono">
         {brackets.length} team{brackets.length !== 1 ? 's' : ''} total
