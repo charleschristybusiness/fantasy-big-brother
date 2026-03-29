@@ -44,23 +44,22 @@ export async function POST(request: NextRequest) {
     updated++;
   }
 
-  // Backfill weekly_rankings for all existing weeks
+  // Only snapshot the latest week's rankings (don't overwrite historical snapshots)
   const weeks = (events || []).map((e: { week_number: number }) => e.week_number);
-  const uniqueWeeks = [...new Set(weeks)].sort((a, b) => a - b);
+  const latestWeek = weeks.length > 0 ? Math.max(...weeks) : null;
 
-  // Fetch updated brackets sorted by score
-  const { data: rankedBrackets } = await supabase
-    .from('brackets')
-    .select('id, total_score')
-    .eq('season_id', season_id)
-    .order('total_score', { ascending: false });
+  if (latestWeek !== null) {
+    const { data: rankedBrackets } = await supabase
+      .from('brackets')
+      .select('id, total_score')
+      .eq('season_id', season_id)
+      .order('total_score', { ascending: false });
 
-  if (rankedBrackets && uniqueWeeks.length > 0) {
-    for (const week of uniqueWeeks) {
+    if (rankedBrackets) {
       const rankings = rankedBrackets.map((b: { id: string; total_score: number }, index: number) => ({
         season_id,
         bracket_id: b.id,
-        week_number: week,
+        week_number: latestWeek,
         rank: index + 1,
         total_score: b.total_score,
       }));
