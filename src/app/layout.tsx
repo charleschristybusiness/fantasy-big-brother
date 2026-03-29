@@ -41,6 +41,9 @@ export default function RootLayout({
               <Link href="/trends" className="text-gray-300 hover:text-white transition">
                 Trends
               </Link>
+              <Link href="/compare" className="text-gray-300 hover:text-white transition">
+                Compare
+              </Link>
               <Link href="/submit" className="text-gray-300 hover:text-white transition">
                 Submit Bracket
               </Link>
