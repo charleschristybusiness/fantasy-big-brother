@@ -8,6 +8,7 @@ import { getHouseguestStats } from '@/lib/scoring';
 export default function HouseguestsPage() {
   const [season, setSeason] = useState<Season | null>(null);
   const [standings, setStandings] = useState<HouseguestStats[]>([]);
+  const [rankChanges, setRankChanges] = useState<Map<string, number | null>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,10 +43,52 @@ export default function HouseguestsPage() {
       const survivors = (survivorsData || []) as BlockSurvivor[];
       const evictedCount = houseguests.filter((h) => h.status === 'evicted').length;
 
+      // Current standings
       const stats = houseguests
         .map((h) => getHouseguestStats(h, events, survivors, s.houseguest_count, evictedCount))
         .sort((a, b) => b.base_score - a.base_score);
 
+      // Compute rank changes by comparing to previous week's rankings
+      const changes = new Map<string, number | null>();
+      const weeks = [...new Set(events.map((e) => e.week_number))].sort((a, b) => a - b);
+
+      if (weeks.length >= 2) {
+        const prevWeek = weeks[weeks.length - 2];
+
+        // Build event id -> week map for filtering survivors
+        const eventWeekMap = new Map<string, number>();
+        for (const event of events) {
+          eventWeekMap.set(event.id, event.week_number);
+        }
+
+        // Filter to events up to previous week
+        const prevEvents = events.filter((e) => e.week_number <= prevWeek);
+        const prevSurvivors = survivors.filter((bs) => {
+          const eventWeek = eventWeekMap.get(bs.weekly_event_id);
+          return eventWeek !== undefined && eventWeek <= prevWeek;
+        });
+        const prevEvictedCount = prevEvents.filter((e) => e.evicted_houseguest_id).length;
+
+        // Compute previous week rankings
+        const prevStats = houseguests
+          .map((h) => getHouseguestStats(h, prevEvents, prevSurvivors, s.houseguest_count, prevEvictedCount))
+          .sort((a, b) => b.base_score - a.base_score);
+
+        const prevRankMap = new Map<string, number>();
+        prevStats.forEach((s, i) => prevRankMap.set(s.houseguest.id, i + 1));
+
+        stats.forEach((s, index) => {
+          const currentRank = index + 1;
+          const prevRank = prevRankMap.get(s.houseguest.id);
+          if (prevRank !== undefined) {
+            changes.set(s.houseguest.id, prevRank - currentRank);
+          } else {
+            changes.set(s.houseguest.id, null);
+          }
+        });
+      }
+
+      setRankChanges(changes);
       setStandings(stats);
       setLoading(false);
     }
@@ -81,6 +124,7 @@ export default function HouseguestsPage() {
               <thead>
                 <tr className="border-b border-gray-800 text-left text-sm text-gray-400">
                   <th className="px-4 py-3 w-16">Rank</th>
+                  <th className="px-4 py-3 w-16 text-center">+/-</th>
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3 text-center">Status</th>
                   <th className="px-4 py-3 text-right">HOH</th>
@@ -93,6 +137,7 @@ export default function HouseguestsPage() {
               <tbody>
                 {standings.map((s, index) => {
                   const rank = index + 1;
+                  const change = rankChanges.get(s.houseguest.id);
                   return (
                     <tr
                       key={s.houseguest.id}
@@ -114,6 +159,17 @@ export default function HouseguestsPage() {
                         >
                           #{rank}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-center text-sm font-mono">
+                        {change === undefined || change === null ? (
+                          <span className="text-gray-600">&mdash;</span>
+                        ) : change > 0 ? (
+                          <span className="text-green-400">&uarr;+{change}</span>
+                        ) : change < 0 ? (
+                          <span className="text-red-400">&darr;{change}</span>
+                        ) : (
+                          <span className="text-gray-600">&mdash;</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-white">{s.houseguest.name}</td>
                       <td className="px-4 py-3 text-center">
