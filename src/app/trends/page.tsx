@@ -324,6 +324,7 @@ export default function TrendsPage() {
                       const team = brackets.find((b) => b.id === String(name));
                       return [`${value} pts`, team?.team_name || String(name)];
                     }}
+                    itemSorter={(item) => -(item.value as number)}
                     labelStyle={{ color: '#9ca3af' }}
                   />
                   {brackets
@@ -393,6 +394,7 @@ export default function TrendsPage() {
                       const hg = sortedHouseguests.find((h) => h.id === String(name));
                       return [`${value} pts`, hg?.name || String(name)];
                     }}
+                    itemSorter={(item) => -(item.value as number)}
                     labelStyle={{ color: '#9ca3af' }}
                   />
                   {sortedHouseguests
