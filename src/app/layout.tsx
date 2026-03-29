@@ -35,6 +35,9 @@ export default function RootLayout({
               <Link href="/leaderboard" className="text-gray-300 hover:text-white transition">
                 Leaderboard
               </Link>
+              <Link href="/houseguests" className="text-gray-300 hover:text-white transition">
+                Houseguests
+              </Link>
               <Link href="/trends" className="text-gray-300 hover:text-white transition">
                 Trends
               </Link>
