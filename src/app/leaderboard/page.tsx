@@ -5,51 +5,67 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Season, Houseguest, Bracket, WeeklyEvent, BlockSurvivor, WeeklyRanking } from '@/lib/types';
 import { calculateBracketScore } from '@/lib/scoring';
+import {
+  Card,
+  PageHeader,
+  EmptyState,
+  NoSeason,
+  Skeleton,
+  RankNumber,
+  RankChange,
+  inputCls,
+  thCls,
+  trCls,
+} from '@/components/ui';
 
 function LeaderboardSkeleton() {
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12">
-      <div className="h-9 w-48 animate-pulse bg-gray-800 rounded-lg mb-2" />
-      <div className="h-5 w-32 animate-pulse bg-gray-800 rounded mb-6" />
-      <div className="h-12 w-full animate-pulse bg-gray-800 rounded-lg mb-8" />
-      {/* Podium skeleton */}
-      <div className="grid grid-cols-3 items-end gap-4 mb-10">
-        <div className="pt-8">
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 h-40 animate-pulse" />
-        </div>
-        <div>
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 h-48 animate-pulse" />
-        </div>
-        <div className="pt-12">
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 h-36 animate-pulse" />
-        </div>
+    <div className="mx-auto max-w-5xl px-4 py-12">
+      <Skeleton className="mb-2 h-9 w-48" />
+      <Skeleton className="mb-8 h-5 w-32" />
+      <Skeleton className="mb-8 h-11 w-full" />
+      <div className="mb-8 grid grid-cols-3 items-end gap-4">
+        <Skeleton className="h-36" />
+        <Skeleton className="h-44" />
+        <Skeleton className="h-32" />
       </div>
-      <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+      <Card className="overflow-hidden">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 px-4 py-4 border-b border-gray-800/50">
-            <div className="h-5 w-10 animate-pulse bg-gray-800 rounded" />
-            <div className="h-5 w-10 animate-pulse bg-gray-800 rounded" />
-            <div className="h-5 flex-1 animate-pulse bg-gray-800 rounded" />
-            <div className="h-5 w-20 animate-pulse bg-gray-800 rounded" />
+          <div key={i} className="flex items-center gap-4 border-b border-edge/60 px-4 py-4 last:border-0">
+            <Skeleton className="h-5 w-8" />
+            <Skeleton className="h-5 w-8" />
+            <Skeleton className="h-5 flex-1" />
+            <Skeleton className="h-5 w-20" />
           </div>
         ))}
-      </div>
+      </Card>
     </div>
   );
 }
 
-function RankChangeDisplay({ change }: { change: number | null | undefined }) {
-  if (change === undefined || change === null) {
-    return <span className="text-gray-600">&mdash;</span>;
-  }
-  if (change > 0) {
-    return <span className="text-green-400 font-bold">&uarr;{change}</span>;
-  }
-  if (change < 0) {
-    return <span className="text-red-400 font-bold">&darr;{change}</span>;
-  }
-  return <span className="text-gray-600">&mdash;</span>;
-}
+const PODIUM_STYLES = [
+  {
+    // 1st — center on desktop
+    wrap: 'sm:order-2',
+    card: 'border-gold/30 bg-gradient-to-b from-gold/[0.07] to-transparent',
+    chip: 'bg-gold text-black',
+    score: 'text-gold text-3xl',
+  },
+  {
+    // 2nd — left
+    wrap: 'sm:order-1 sm:mt-8',
+    card: 'border-silver/15 bg-gradient-to-b from-silver/[0.04] to-transparent',
+    chip: 'bg-raised text-silver border border-silver/30',
+    score: 'text-silver text-2xl',
+  },
+  {
+    // 3rd — right
+    wrap: 'sm:order-3 sm:mt-12',
+    card: 'border-bronze/15 bg-gradient-to-b from-bronze/[0.04] to-transparent',
+    chip: 'bg-raised text-bronze border border-bronze/30',
+    score: 'text-bronze text-2xl',
+  },
+];
 
 export default function LeaderboardPage() {
   const [season, setSeason] = useState<Season | null>(null);
@@ -143,151 +159,92 @@ export default function LeaderboardPage() {
   }
 
   if (!season) {
-    return (
-      <div className="max-w-5xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-3xl font-bold text-white mb-4">No Active Season</h1>
-        <p className="text-gray-400">There is no active season right now.</p>
-      </div>
-    );
+    return <NoSeason />;
   }
 
-  // Top 3 for podium
-  const first = brackets[0];
-  const second = brackets[1];
-  const third = brackets[2];
-
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-1">Leaderboard</h1>
-        <p className="text-gray-400">{season.name}</p>
-      </div>
+    <div className="mx-auto max-w-5xl px-4 py-12">
+      <PageHeader eyebrow="Standings" title="Leaderboard" subtitle={season.name} />
 
-      <div className="relative mb-8">
+      <div className="mb-8">
         <input
           type="text"
-          placeholder="Search by team name..."
+          placeholder="Search by team name…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-gray-900 border border-gray-800 rounded-xl px-5 py-3.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500/50 transition-all duration-200"
+          className={inputCls}
+          aria-label="Search by team name"
         />
       </div>
 
-      {/* Podium - Top 3 */}
+      {/* Podium — top 3 */}
       {showPodium && (
-        <div className="grid grid-cols-3 items-end gap-3 sm:gap-5 mb-10">
-          {/* #2 - Silver (Left) */}
-          <div className="pt-6 sm:pt-8">
-            <div className="bg-gray-900 rounded-xl border border-gray-400/20 p-4 sm:p-6 text-center hover:border-gray-400/40 transition-all duration-300 group">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-400/10 border-2 border-gray-400/40 flex items-center justify-center mx-auto mb-3">
-                <span className="text-gray-300 font-bold text-lg sm:text-xl font-mono">2</span>
-              </div>
-              <Link href={`/team/${second.id}`} className="text-white hover:text-gray-300 transition-colors duration-200 block">
-                <h3 className="font-semibold text-sm sm:text-base truncate">{second.team_name}</h3>
-              </Link>
-              <div className="text-xl sm:text-2xl font-bold font-mono text-gray-300 mt-2">
-                {second.total_score.toFixed(2)}
-              </div>
-              <div className="text-sm font-mono mt-1">
-                <RankChangeDisplay change={rankChanges.get(second.id)} />
-              </div>
-            </div>
-          </div>
-
-          {/* #1 - Gold (Center) */}
-          <div>
-            <div className="bg-gray-900 rounded-xl border border-yellow-500/30 p-5 sm:p-7 text-center shadow-[0_0_25px_rgba(250,204,21,0.12)] hover:shadow-[0_0_35px_rgba(250,204,21,0.2)] transition-all duration-300 group relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-b from-yellow-500/5 via-transparent to-transparent" />
-              <div className="relative">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-yellow-500/15 border-2 border-yellow-500/50 flex items-center justify-center mx-auto mb-3">
-                  <span className="text-yellow-400 font-bold text-xl sm:text-2xl font-mono">1</span>
-                </div>
-                <Link href={`/team/${first.id}`} className="text-white hover:text-yellow-400 transition-colors duration-200 block">
-                  <h3 className="font-bold text-base sm:text-lg truncate">{first.team_name}</h3>
+        <div className="mb-8 grid gap-4 sm:grid-cols-3 sm:items-start">
+          {brackets.slice(0, 3).map((bracket, i) => {
+            const style = PODIUM_STYLES[i];
+            return (
+              <div key={bracket.id} className={style.wrap}>
+                <Link href={`/team/${bracket.id}`} className="block">
+                  <Card
+                    className={`p-6 text-center transition-colors hover:border-edge-bright ${style.card}`}
+                  >
+                    <span
+                      className={`mx-auto mb-3 flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold tabular-nums ${style.chip}`}
+                    >
+                      {i + 1}
+                    </span>
+                    <h3 className="truncate font-semibold text-ink">{bracket.team_name}</h3>
+                    <p className={`mt-1.5 font-semibold tabular-nums ${style.score}`}>
+                      {bracket.total_score.toFixed(2)}
+                    </p>
+                    <p className="mt-1 text-sm">
+                      <RankChange change={rankChanges.get(bracket.id)} />
+                    </p>
+                  </Card>
                 </Link>
-                <div className="text-2xl sm:text-3xl font-bold font-mono text-yellow-400 mt-2">
-                  {first.total_score.toFixed(2)}
-                </div>
-                <div className="text-sm font-mono mt-1">
-                  <RankChangeDisplay change={rankChanges.get(first.id)} />
-                </div>
               </div>
-            </div>
-          </div>
-
-          {/* #3 - Bronze (Right) */}
-          <div className="pt-10 sm:pt-12">
-            <div className="bg-gray-900 rounded-xl border border-amber-600/20 p-4 sm:p-5 text-center hover:border-amber-600/40 transition-all duration-300 group">
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-amber-600/10 border-2 border-amber-600/40 flex items-center justify-center mx-auto mb-3">
-                <span className="text-amber-500 font-bold text-lg sm:text-xl font-mono">3</span>
-              </div>
-              <Link href={`/team/${third.id}`} className="text-white hover:text-amber-400 transition-colors duration-200 block">
-                <h3 className="font-semibold text-sm sm:text-base truncate">{third.team_name}</h3>
-              </Link>
-              <div className="text-lg sm:text-xl font-bold font-mono text-amber-500 mt-2">
-                {third.total_score.toFixed(2)}
-              </div>
-              <div className="text-sm font-mono mt-1">
-                <RankChangeDisplay change={rankChanges.get(third.id)} />
-              </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
       )}
 
       {/* Table */}
       {filtered.length === 0 ? (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
-          <p className="text-gray-500 text-lg">
-            {brackets.length === 0 ? 'No brackets submitted yet.' : 'No matching teams found.'}
-          </p>
-        </div>
+        <EmptyState
+          title={brackets.length === 0 ? 'No brackets submitted yet' : 'No matching teams'}
+          hint={brackets.length === 0 ? 'Standings appear once the first bracket is in.' : 'Try a different search.'}
+        />
       ) : tableData.length > 0 ? (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-          <table className="w-full">
+        <Card className="overflow-hidden">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-800 text-sm text-gray-500 uppercase tracking-wider">
-                <th className="px-4 py-3.5 text-left w-16 font-semibold">Rank</th>
-                <th className="px-4 py-3.5 w-16 text-center font-semibold">+/-</th>
-                <th className="px-4 py-3.5 text-left font-semibold">Team Name</th>
-                <th className="px-4 py-3.5 text-right font-semibold">Score</th>
+              <tr className="border-b border-edge">
+                <th className={`${thCls} w-16`}>Rank</th>
+                <th className={`${thCls} w-16 text-center`}>+/-</th>
+                <th className={thCls}>Team</th>
+                <th className={`${thCls} text-right`}>Score</th>
               </tr>
             </thead>
             <tbody>
               {tableData.map((bracket) => {
                 const globalRank = brackets.indexOf(bracket) + 1;
-                const change = rankChanges.get(bracket.id);
-
-                // Left border accent based on rank
-                const borderAccent =
-                  globalRank <= 10
-                    ? 'border-l-2 border-l-cyan-500/30'
-                    : globalRank <= 20
-                    ? 'border-l-2 border-l-cyan-500/15'
-                    : 'border-l-2 border-l-transparent';
-
                 return (
-                  <tr
-                    key={bracket.id}
-                    className={`border-b border-gray-800/50 transition-all duration-200 hover:bg-gray-800/50 ${borderAccent}`}
-                  >
+                  <tr key={bracket.id} className={trCls}>
                     <td className="px-4 py-3.5">
-                      <span className="font-mono text-gray-500">
-                        #{globalRank}
-                      </span>
+                      <RankNumber rank={globalRank} />
                     </td>
-                    <td className="px-4 py-3.5 text-center text-sm font-mono">
-                      <RankChangeDisplay change={change} />
+                    <td className="px-4 py-3.5 text-center">
+                      <RankChange change={rankChanges.get(bracket.id)} />
                     </td>
                     <td className="px-4 py-3.5">
                       <Link
                         href={`/team/${bracket.id}`}
-                        className="text-white hover:text-yellow-400 transition-colors duration-200"
+                        className="font-medium text-ink transition-colors hover:text-gold"
                       >
                         {bracket.team_name}
                       </Link>
                     </td>
-                    <td className="px-4 py-3.5 text-right font-mono text-yellow-400">
+                    <td className="px-4 py-3.5 text-right font-semibold text-gold tabular-nums">
                       {bracket.total_score.toFixed(2)}
                     </td>
                   </tr>
@@ -295,10 +252,10 @@ export default function LeaderboardPage() {
               })}
             </tbody>
           </table>
-        </div>
+        </Card>
       ) : null}
 
-      <p className="text-gray-500 text-sm mt-4 text-center font-mono">
+      <p className="mt-4 text-center text-sm text-ink-dim tabular-nums">
         {brackets.length} team{brackets.length !== 1 ? 's' : ''} total
       </p>
     </div>

@@ -4,3 +4,62 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
+
+@theme {
+  /* Surfaces — page → card → nested → floating */
+  --color-canvas: #0a0b0e;
+  --color-surface: #12141a;
+  --color-raised: #1a1d25;
+  --color-overlay: #232733;
+
+  /* Hairlines */
+  --color-edge: #22252f;
+  --color-edge-bright: #2f3441;
+
+  /* Ink */
+  --color-ink: #f2f4f8;
+  --color-ink-mid: #98a1b0;
+  --color-ink-dim: #5c6473;
+
+  /* Accent — spotlight gold */
+  --color-gold: #f5c518;
+  --color-gold-bright: #ffd75e;
+
+  /* Medals */
+  --color-silver: #c3cad6;
+  --color-bronze: #d08c4a;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+::selection {
+  background: rgba(245, 197, 24, 0.25);
+}
+
+/* Thin dark scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-edge-bright) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-edge-bright);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Faint dot grid for hero sections, fading out toward the bottom */
+.bg-dots {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(to bottom, black, transparent);
+  mask-image: linear-gradient(to bottom, black, transparent);
+}

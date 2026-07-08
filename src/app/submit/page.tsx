@@ -4,18 +4,30 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Season, Houseguest } from '@/lib/types';
+import {
+  Card,
+  PageHeader,
+  EmptyState,
+  NoSeason,
+  Skeleton,
+  inputCls,
+  selectCls,
+  btnPrimary,
+} from '@/components/ui';
+
+const MULTIPLIERS = ['1.5×', '1.25×', '1.0×', '0.75×', '0.5×'];
 
 function SubmitSkeleton() {
   return (
-    <div className="max-w-2xl mx-auto px-4 py-12">
-      <div className="h-9 w-64 animate-pulse bg-gray-800 rounded-lg mb-2" />
-      <div className="h-5 w-40 animate-pulse bg-gray-800 rounded mb-8" />
-      <div className="space-y-6">
-        <div className="h-12 w-full animate-pulse bg-gray-800 rounded-lg" />
+    <div className="mx-auto max-w-2xl px-4 py-12">
+      <Skeleton className="mb-2 h-9 w-64" />
+      <Skeleton className="mb-8 h-5 w-40" />
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-full" />
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-12 w-full animate-pulse bg-gray-800 rounded-lg" />
+          <Skeleton key={i} className="h-24 w-full" />
         ))}
-        <div className="h-14 w-full animate-pulse bg-gray-800 rounded-lg" />
+        <Skeleton className="h-14 w-full" />
       </div>
     </div>
   );
@@ -116,88 +128,99 @@ export default function SubmitBracketPage() {
   }
 
   if (!season) {
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-3xl font-bold text-white mb-4">No Active Season</h1>
-        <p className="text-gray-400">There is no active season right now. Check back later!</p>
-      </div>
-    );
+    return <NoSeason />;
   }
 
   if (season.submissions_locked) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-3xl font-bold text-white mb-4">Submissions Locked</h1>
-        <div className="inline-block bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-6 py-3">
-          <p className="text-yellow-400">
-            Bracket submissions are currently locked. The season has already begun!
-          </p>
-        </div>
+      <div className="mx-auto max-w-2xl px-4 py-12">
+        <PageHeader eyebrow="Draft" title="Submissions locked" subtitle={season.name} />
+        <EmptyState
+          title="The season has already begun"
+          hint="Bracket submissions are locked — follow your league on the leaderboard."
+        />
       </div>
     );
   }
 
-  const multipliers = ['1.5x', '1.25x', '1.0x', '0.75x', '0.5x'];
-  const multiplierColors = ['text-yellow-400', 'text-yellow-400/80', 'text-gray-300', 'text-gray-400', 'text-gray-500'];
-
   return (
-    <div className="max-w-2xl mx-auto px-4 py-12">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-1">Submit Your Bracket</h1>
-        <p className="text-gray-400">{season.name}</p>
-      </div>
+    <div className="mx-auto max-w-2xl px-4 py-12">
+      <PageHeader
+        eyebrow="Draft"
+        title="Submit your bracket"
+        subtitle={`${season.name} — pick five houseguests, ranked by confidence`}
+      />
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">
-            Team Name
+          <label
+            htmlFor="team-name"
+            className="mb-2 block text-xs font-medium uppercase tracking-wider text-ink-dim"
+          >
+            Team name
           </label>
           <input
+            id="team-name"
             type="text"
             value={teamName}
             onChange={(e) => setTeamName(e.target.value)}
-            className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500/50 transition-all duration-200"
+            className={inputCls}
             placeholder="Enter your team name"
             maxLength={50}
           />
         </div>
 
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-white">Select Your 5 Houseguests</h2>
+        <div className="space-y-3">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-ink-dim">
+            Your five picks
+          </h2>
           {[0, 1, 2, 3, 4].map((index) => (
-            <div key={index} className="bg-gray-900 rounded-xl border border-gray-800 p-4 hover:border-gray-700 transition-colors duration-200">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Pick #{index + 1}{' '}
-                <span className={`font-mono font-bold ${multiplierColors[index]}`}>({multipliers[index]} multiplier)</span>
-              </label>
-              <select
-                value={picks[index]}
-                onChange={(e) => handlePickChange(index, e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500/50 transition-all duration-200"
+            <Card key={index} className="flex items-center gap-4 p-4 transition-colors hover:border-edge-bright">
+              <span
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold tabular-nums ${
+                  index === 0 ? 'bg-gold text-black' : 'bg-raised text-ink-mid border border-edge'
+                }`}
+                aria-hidden
               >
-                <option value="">-- Select a houseguest --</option>
-                {getAvailableHouseguests(index).map((hg) => (
-                  <option key={hg.id} value={hg.id}>
-                    {hg.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+                {index + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <label
+                  htmlFor={`pick-${index}`}
+                  className="mb-1.5 block text-xs text-ink-dim"
+                >
+                  Pick {index + 1} &middot;{' '}
+                  <span className="font-semibold text-ink-mid tabular-nums">
+                    {MULTIPLIERS[index]}
+                  </span>{' '}
+                  points multiplier
+                </label>
+                <select
+                  id={`pick-${index}`}
+                  value={picks[index]}
+                  onChange={(e) => handlePickChange(index, e.target.value)}
+                  className={selectCls}
+                >
+                  <option value="">Select a houseguest…</option>
+                  {getAvailableHouseguests(index).map((hg) => (
+                    <option key={hg.id} value={hg.id}>
+                      {hg.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </Card>
           ))}
         </div>
 
         {error && (
-          <div className="bg-red-900/30 border border-red-500/30 rounded-xl p-4 text-red-400">
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400" role="alert">
             {error}
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-700 disabled:cursor-not-allowed text-gray-900 font-bold py-4 px-8 rounded-xl text-lg transition-all duration-300 shadow-[0_0_20px_rgba(250,204,21,0.15)] hover:shadow-[0_0_30px_rgba(250,204,21,0.3)] disabled:shadow-none"
-        >
-          {submitting ? 'Submitting...' : 'Submit Bracket'}
+        <button type="submit" disabled={submitting} className={`${btnPrimary} w-full py-3.5 text-base`}>
+          {submitting ? 'Submitting…' : 'Submit bracket'}
         </button>
       </form>
     </div>

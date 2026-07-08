@@ -9,7 +9,7 @@ Fantasy sports web app for Big Brother — fans draft houseguests and earn point
 - **Styling**: Tailwind CSS v4 — uses `@import "tailwindcss"` in globals.css, NO tailwind.config file
 - **Database**: Supabase (PostgreSQL) via `@supabase/supabase-js`
 - **Charts**: Recharts 3.x
-- **Fonts**: Geist Sans (UI) + Geist Mono (numbers) via `next/font`
+- **Fonts**: Geist Sans (UI) + Geist Mono (available via `font-mono`) via `next/font`
 - **Path alias**: `@/*` maps to `./src/*`
 
 ## Commands
@@ -17,212 +17,157 @@ Fantasy sports web app for Big Brother — fans draft houseguests and earn point
 - `npm run build` — production build
 - `npm run lint` — ESLint check
 
-## Color Palette
+## Design System — "Broadcast Dark"
 
-### Base (dark theme — never lighten)
-- **Page background**: `bg-gray-950` (only use here)
-- **Cards/sections**: `bg-gray-900`
-- **Nested elements/inputs**: `bg-gray-800`
-- **Borders**: `border-gray-800` (cards), `border-gray-700` (inputs/forms)
+Refined dark UI: near-black canvas, hairline borders, one gold accent. No neon glows,
+no multi-color accent schemes. The energy comes from contrast and the gold, not effects.
 
-### Accents
-- **Primary (Spotlight Yellow)**: `text-yellow-400` / `bg-yellow-500` — scores, page titles, primary buttons, featured elements
-- **Secondary (Neon Cyan)**: `text-cyan-400` / `bg-cyan-500` — data highlights, stats, secondary accents
-- **Tertiary (Drama Fuchsia)**: `text-fuchsia-400` / `bg-fuchsia-500` — special moments, alerts, dramatic emphasis
+All design tokens are defined in `src/app/globals.css` via Tailwind v4 `@theme` and used
+as normal utility classes (`bg-surface`, `text-ink-mid`, `border-edge`, …).
 
-### Status Colors
-- **Active/positive**: `text-green-400` / `bg-green-900/50`
-- **Evicted/danger**: `text-red-400` / `bg-red-900/50`
-- **Runner-up**: `text-blue-400` / `bg-blue-900/50`
-- **3rd place**: `text-amber-600`
+### Surface tokens (never lighten the base)
+- `bg-canvas` (#0a0b0e) — page background only
+- `bg-surface` (#12141a) — cards and panels
+- `bg-raised` (#1a1d25) — nested elements, inputs, chips
+- `bg-overlay` (#232733) — floating elements (tooltips, menus)
 
-### Glow Effects
-- **Yellow spotlight**: `shadow-[0_0_20px_rgba(250,204,21,0.2)]` — #1 ranked items, featured cards
-- **Cyan glow**: `shadow-[0_0_15px_rgba(34,211,238,0.15)]` — stat highlights
-- **Fuchsia glow**: `shadow-[0_0_15px_rgba(217,70,239,0.15)]` — dramatic moments
-- **Card hover glow**: `hover:border-yellow-500/30 hover:shadow-[0_0_15px_rgba(250,204,21,0.1)]`
+### Line tokens
+- `border-edge` (#22252f) — default hairline for cards, dividers, table rows
+- `border-edge-bright` (#2f3441) — hover borders, rings on avatars
 
-### Gradients
-- **Hero sections**: `bg-gradient-to-br from-gray-950 via-gray-900 to-cyan-950/20`
-- **Dramatic header**: `bg-gradient-to-r from-yellow-500/10 via-transparent to-fuchsia-500/10`
+### Ink tokens (text)
+- `text-ink` (#f2f4f8) — headings, primary values, names
+- `text-ink-mid` (#98a1b0) — body copy, secondary text
+- `text-ink-dim` (#5c6473) — labels, hints, muted metadata
+
+### Accent
+- `gold` (#f5c518) / `gold-bright` (#ffd75e) — THE accent. Scores, eyebrow labels,
+  primary buttons, active tabs, #1-rank highlights, focus rings.
+- Gold surfaces: `bg-gold/10` wash + `border-gold/20` (badges), `bg-gold/[0.04]` (#1 rows)
+- Text on solid gold is always `text-black`
+- Medals: `text-silver` (#c3cad6) for 2nd, `text-bronze` (#d08c4a) for 3rd
+
+### Status colors (always paired with a text label, never color alone)
+- Active: `text-emerald-400` + `bg-emerald-400/10` + `border-emerald-400/20` (+ pulsing dot)
+- Evicted/danger: `text-red-400` + `bg-red-400/10` + `border-red-400/20`
+- Winner: gold equivalents
+- Runner-up: `text-sky-400` equivalents
+- Rank change: up `text-emerald-400`, down `text-red-400`, none `text-ink-dim` em-dash
 
 ## Typography
-
-### Hierarchy
-- **Page title**: `text-3xl font-bold text-yellow-400`
-- **Section title**: `text-xl font-bold text-white`
-- **Subsection**: `text-lg font-semibold text-white`
-- **Body**: `text-gray-300`
-- **Secondary text**: `text-gray-400`
-- **Muted/tertiary**: `text-gray-500`
-
-### Rules
-- **Geist Sans**: all UI text — headings, labels, descriptions, nav
-- **Geist Mono** (`font-mono`): ALL numbers — scores, points, multipliers, ranks, stats, percentages
-- **Labels**: `text-sm font-semibold text-gray-400 uppercase tracking-wider`
-- Scores always: `font-mono text-yellow-400`
+- **Page title**: `text-3xl font-bold tracking-tight text-ink`
+- **Eyebrow** (above titles): `text-xs font-semibold uppercase tracking-[0.15em] text-gold`
+- **Section heading**: `text-sm font-semibold uppercase tracking-wider text-ink-mid`
+- **Form/table labels**: `text-xs font-medium uppercase tracking-wider text-ink-dim`
+- **Body**: `text-sm text-ink-mid`
+- **Numbers**: Geist Sans with `tabular-nums` in any column/row that must align
+  (scores, ranks, stats). Large standalone numbers (hero scores) use `font-semibold`
+  proportional figures. Do NOT use `font-mono` for numbers.
+- **Scores**: `font-semibold text-gold tabular-nums`
 
 ## Component Patterns
 
+Shared primitives live in `src/components/ui.tsx` — **use them, don't re-implement**:
+`Card`, `PageHeader`, `EmptyState`, `NoSeason`, `Skeleton`, `StatTile`, `Avatar`,
+`StatusBadge`, `RankNumber`, `RankChange`, icons (`IconUsers`, `IconHome`,
+`IconCalendar`, `IconTrophy`, `IconEye` — 18px, 1.75 stroke, always `text-ink-dim`),
+plus exported class strings
+`inputCls`, `selectCls`, `btnPrimary`, `btnSecondary`, `btnDanger`, `thCls`, `trCls`.
+The nav is `src/components/nav.tsx` (client component, active-state pills + mobile menu).
+
 ### Cards
-```
-bg-gray-900 rounded-xl border border-gray-800 p-6
-```
-- Add `hover:border-yellow-500/30 hover:shadow-[0_0_15px_rgba(250,204,21,0.1)] transition-all duration-300` for interactive cards
-- Nested elements inside cards: `bg-gray-800 rounded-lg p-3`
+The `Card` component bakes in depth (`rounded-2xl border border-edge bg-surface` +
+an inset top highlight and soft outer shadow) — never build a bare card div.
+- Interactive cards add `transition-colors hover:border-edge-bright`
+- Nested elements inside cards: `rounded-xl border border-edge bg-raised p-3`
+- Card section headers: `border-b border-edge px-5 py-4`
 
 ### Buttons
-- **Primary**: `bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold rounded-lg px-6 py-3 transition`
-- **Secondary**: `bg-gray-800 text-gray-300 hover:bg-gray-700 rounded-lg px-4 py-2 transition`
-- **Danger**: `bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg px-4 py-2 transition`
-- **Disabled**: add `opacity-50 cursor-not-allowed`
+- **Primary**: `rounded-xl bg-gold px-5 py-2.5 text-sm font-semibold text-black hover:bg-gold-bright`
+- **Secondary**: `rounded-xl border border-edge bg-raised text-ink-mid hover:border-edge-bright hover:text-ink`
+- **Danger**: `rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20`
+- Disabled: `disabled:cursor-not-allowed disabled:opacity-40`
 
 ### Inputs & Selects
 ```
-bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500
-focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition
+rounded-xl border border-edge bg-raised px-4 py-2.5 text-sm text-ink
+placeholder:text-ink-dim focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20
 ```
 
-### Status Badges
-```
-text-xs font-medium px-2 py-1 rounded-full
-```
-- Active: `bg-green-900/50 text-green-400`
-- Evicted: `bg-red-900/50 text-red-400`
-- Winner: `bg-yellow-900/50 text-yellow-400`
+### Badges / chips
+`rounded-full border px-2.5 py-0.5 text-xs font-medium` + status color trio (see above).
 
-### Tabs
-- Active: `bg-yellow-500 text-gray-900 font-medium px-4 py-2 rounded-lg`
-- Inactive: `bg-gray-800 text-gray-400 hover:text-white font-medium px-4 py-2 rounded-lg transition`
-
-### Avatar Fallback
-```
-w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-gray-400 font-bold
-```
+### Tabs (segmented)
+- Container: `inline-flex gap-1 rounded-xl border border-edge bg-surface p-1`
+- Active: `rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-black`
+- Inactive: `text-ink-mid hover:text-ink`
 
 ### Tables
-- Container: card pattern with `overflow-hidden`
-- Header: `text-left text-sm font-semibold text-gray-400 uppercase tracking-wider`
-- Rows: `border-b border-gray-800/50 hover:bg-gray-800/50 transition`
-- Rank colors: #1 `text-yellow-400`, #2 `text-gray-300`, #3 `text-amber-600`
-- Change indicators: `text-green-400` ↑, `text-red-400` ↓, `text-gray-600` —
+- Wrap in Card with `overflow-hidden`; `table` is `w-full text-sm`
+- Header row: `border-b border-edge`, cells use `thCls`
+- Body rows: `trCls` (`border-b border-edge/60 last:border-0 hover:bg-white/[0.02]`)
+- Rank colors via `RankNumber`; #1 row gets `bg-gold/[0.04]`
+- Numeric cells right-aligned with `tabular-nums`
+
+### Loading states
+- ALWAYS skeleton placeholders (`Skeleton` component: `animate-pulse rounded-lg bg-raised`),
+  never "Loading..." text. Match the shape of the loaded content.
 
 ## Layout & Spacing
+- Standard pages: `mx-auto max-w-5xl px-4 py-12`
+- Wide pages (dashboard, trends, houseguests): `max-w-6xl`; forecast: `max-w-7xl`
+- Narrow pages (submit): `max-w-2xl`
+- Between cards in a list: `space-y-4`; page sections: `mt-12` or `space-y-6`
+- Grid gaps: `gap-4` (tiles), `gap-6` (cards)
+- Nav: sticky, `border-b border-edge bg-canvas/85 backdrop-blur-md`, pill links
+  (active `bg-raised text-ink`), gold "Submit bracket" CTA. Admin link lives in the footer.
+- Hero sections: `.bg-dots` utility (faint dot grid fading downward, defined in
+  globals.css) + one soft gold radial orb; hero headline uses gradient text
+  (`bg-gradient-to-b from-white to-ink-mid bg-clip-text text-transparent`)
+- App icon: `src/app/icon.svg` (gold rounded square, black BB)
 
-### Page Containers
-- Standard pages: `max-w-5xl mx-auto px-4 py-12`
-- Wide pages (trends, compare): `max-w-6xl mx-auto px-4 py-12`
-- Narrow pages (submit): `max-w-4xl mx-auto px-4 py-12`
+## Charts & Data Viz (Recharts)
+Follow the dataviz method: form first, color by job, validated palette, thin marks.
 
-### Spacing Scale
-- Between cards in a list: `space-y-4`
-- Between page sections: `space-y-8` or `mb-8`
-- Card internal sections: `space-y-4` or `space-y-6`
-- Grid gaps: `gap-4` (tight), `gap-6` (standard), `gap-8` (loose)
-
-### Grid Patterns
-- Stats grid: `grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4`
-- Card grid: `grid sm:grid-cols-2 lg:grid-cols-3 gap-6`
-- Compare layout: `grid grid-cols-3` (Team A | VS | Team B)
-
-### Navigation
-- `bg-gray-900 border-b border-gray-800`
-- Links: `text-gray-300 hover:text-white transition`
-- Active link: `text-yellow-400`
-
-## Animation & Interaction
-
-### Transitions
-- Color changes: `transition-colors duration-200`
-- Size/shadow changes: `transition-all duration-300`
-- Comparison bars: `transition-all duration-500`
-- **Max duration**: 500ms for any UI animation
-
-### Hover Effects
-- Cards: glow border + subtle shadow (see Card pattern above)
-- Table rows: `hover:bg-gray-800/50 transition`
-- Nav links: `hover:text-white` or `hover:text-yellow-400`
-- Buttons: always include `transition` with hover color shift
-
-### Loading States
-- **ALWAYS use skeleton placeholders**, never "Loading..." text
-- Skeleton: `animate-pulse bg-gray-800 rounded`
-- Match the shape of the content being loaded (rectangles for text, circles for avatars)
-- Example: `<div className="h-4 w-32 animate-pulse bg-gray-800 rounded" />`
-
-### Micro-interactions
-- Active status dot: small `animate-pulse` green circle next to "Active" badges
-- Rank change arrows should be visually distinct (green ↑ / red ↓) with `font-bold`
-
-## Big Brother Theme Effects
-
-### Spotlight Treatment
-- #1 ranked row/card: `border-yellow-500/30 shadow-[0_0_20px_rgba(250,204,21,0.15)]`
-- Winner houseguest: yellow glow border + subtle pulsing accent
-
-### Neon Accents
-- Featured/highlighted elements: `border-cyan-500/30` or `border-fuchsia-500/30`
-- Use sparingly — only on 1-2 elements per page max
-
-### Drama
-- Hero sections use gradients (see Gradients above)
-- VS dividers in comparisons: bold, large text with dramatic styling
-- The darkness IS the theme — deep blacks create the Big Brother surveillance feel
-- **Never lighten the base** — add energy through accents and glows, not by raising background lightness
-
-## Charts (Recharts)
-- Grid: `stroke="#374151"` (gray-700), `strokeDasharray="3 3"`
-- Axis text: `fill: '#9ca3af'` (gray-400), `fontSize: 12`
-- Tooltip: `backgroundColor: '#1f2937'`, `border: '1px solid #374151'`, `borderRadius: '8px'`
-- Active dot: `r={6}`, default dot: `r={4}`
-- Always wrap charts in the card pattern with `min-h-[400px]`
-- Use the existing 20-color LINE_COLORS palette from trends page
-
-## Fantasy Sports Patterns
-
-### Leaderboard
-- Table in card, rank numbers color-coded (gold/silver/bronze), +/- indicators
-- `font-mono` for all numeric columns — scores, ranks, changes
-
-### Stat Cards
-```
-bg-gray-800 rounded-lg p-3
-```
-- Label: `text-xs text-gray-400 uppercase tracking-wider`
-- Value: `text-lg font-mono text-white font-bold`
-- Detail: `text-xs text-gray-500`
-
-### Player Cards
-- Avatar (photo or initial fallback) + name + status badge
-- Score breakdown with multiplier shown
-- Link to detailed view
-
-### Score Display
-- Primary score: `font-mono text-2xl text-yellow-400 font-bold`
-- Secondary scores: `font-mono text-lg text-white`
-- Always right-aligned in tables
+- **Categorical series palette** (validated CVD-safe on `#12141a`, in this fixed order):
+  `#3987e5` blue, `#199e70` aqua, `#c98500` yellow, `#008300` green, `#9085e9` violet,
+  `#e66767` red, `#d55181` magenta, `#d95926` orange.
+  Colors are assigned to entities **in rank order at load and never reassigned or cycled**;
+  entities beyond the 8th render muted `#4a515e` — the legend/tooltip carries their identity.
+- Head-to-head team colors: A = `#3987e5` (blue), B = `#d95926` (orange)
+- Grid: solid hairline `#22252f`, horizontal only (`vertical={false}`), never dashed
+- Axis ticks: `fill #7d8594`, fontSize 12, `tickLine={false}`
+- Lines: `strokeWidth={2}`, `dot={false}`, `activeDot={{ r: 5, stroke: '#12141a', strokeWidth: 2 }}`
+  (the surface-colored ring keeps overlapping points legible)
+- Tooltip: `backgroundColor #1a1d25`, `border 1px solid #2f3441`, `borderRadius 10px`
+- Comparison bars: thin (`h-2.5`) rounded, 2px surface gap between segments, values in
+  ink tokens beside the bar (text never wears the series color)
+- Always wrap charts in Card with `min-h-[400px]`; a legend/checkbox panel is always present
 
 ## Accessibility
-- All interactive elements: visible `focus:ring-2 focus:ring-yellow-500` focus state
-- Color is **never** the only indicator — always pair with text, icons, or patterns
-- Ensure text meets WCAG AA contrast on dark backgrounds (gray-300+ on gray-900)
-- Use `sr-only` labels on icon-only buttons
-- Semantic HTML: `<table>` for data, `<nav>` for navigation, `<form>` with `<label>`s
+- All interactive elements: visible `focus:ring-2 focus:ring-gold/20` (or default ring) focus state
+- Color is **never** the only indicator — status badges carry labels, rank changes carry arrows+numbers
+- Text meets WCAG AA on dark surfaces (`text-ink-mid`+ for body copy)
+- `aria-label`/`sr-only` on icon-only buttons; semantic HTML (`<table>`, `<nav>`, `<label>`)
 
 ## Anti-Patterns — NEVER Do These
-- **Never** use light backgrounds (white, gray-50 through gray-300 as backgrounds)
-- **Never** use `bg-gray-950` for cards — that's page background only
-- **Never** display scores/numbers in sans-serif — always `font-mono`
-- **Never** skip borders on cards — always `border border-gray-800`
-- **Never** show "Loading..." text — always use skeleton placeholders
-- **Never** use inline styles except for dynamic widths (comparison bars) or chart colors
-- **Never** use animations longer than 500ms for UI elements
-- **Never** hardcode hex colors in className — use Tailwind palette names
+- **Never** use light backgrounds — the dark canvas is the product
+- **Never** use neon glow shadows (`shadow-[0_0_20px_...]`) — depth comes from surface steps + hairlines
+- **Never** introduce accent colors beyond gold + the status/chart palettes above
+- **Never** use `font-mono` for scores — Geist Sans + `tabular-nums` in columns
+- **Never** skip borders on cards — always `border border-edge`
+- **Never** show "Loading..." text — always skeletons
+- **Never** hardcode hex in className — use the theme tokens; raw hex is allowed only in
+  chart configs and dynamic inline styles (bar widths, series colors)
+- **Never** re-implement a primitive that exists in `src/components/ui.tsx`
+- **Never** use animations longer than 500ms
+- **Never** cycle or reassign chart series colors when filters change
 
 ## File Structure
-- Pages: `src/app/*/page.tsx` (each page self-contained with `'use client'` where needed)
+- Pages: `src/app/*/page.tsx` (client pages use `'use client'`; home is a server component)
+- Shared UI: `src/components/` — `nav.tsx` (header), `ui.tsx` (primitives + class strings)
 - API routes: `src/app/api/*/route.ts`
 - Shared logic: `src/lib/` — `supabase.ts` (client), `types.ts` (interfaces + constants), `scoring.ts` (calculations)
-- Global styles: `src/app/globals.css` (Tailwind v4 format)
+- Global styles + design tokens: `src/app/globals.css` (Tailwind v4 `@theme`)
 - Root layout: `src/app/layout.tsx` (nav + footer shell)
 - All styling via Tailwind utility classes — no component library

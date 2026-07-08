@@ -1,165 +1,343 @@
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { Season } from '@/lib/types';
+import { Season, Houseguest, Bracket, WeeklyEvent, BlockSurvivor, WeeklyRanking } from '@/lib/types';
+import { calculateBracketScore } from '@/lib/scoring';
+import {
+  Card,
+  Avatar,
+  StatTile,
+  RankNumber,
+  RankChange,
+  EmptyState,
+  IconUsers,
+  IconHome,
+  IconCalendar,
+  IconTrophy,
+} from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const { data: season } = await supabase
+  const { data: seasonData } = await supabase
     .from('seasons')
     .select('*')
     .eq('status', 'active')
     .limit(1)
     .single();
 
-  const s = season as Season | null;
+  const season = seasonData as Season | null;
 
-  return (
-    <div className="max-w-5xl mx-auto px-4 py-16">
-      {/* Hero Section */}
-      <div className="text-center mb-16 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-yellow-500/5 via-transparent to-transparent rounded-3xl" />
-        <div className="relative">
-          <h1 className="text-5xl sm:text-6xl font-bold text-yellow-400 mb-3 tracking-tight">
+  if (!season) {
+    return (
+      <div className="mx-auto max-w-6xl px-4">
+        <section className="py-20 text-center">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-gold">
+            Fantasy league
+          </p>
+          <h1 className="text-4xl font-bold tracking-tight text-ink sm:text-5xl">
             Fantasy Big Brother
           </h1>
-          <div className="w-24 h-1 bg-gradient-to-r from-yellow-500 to-cyan-500 mx-auto mb-4 rounded-full" />
-          {s ? (
-            <p className="text-2xl text-gray-300 font-light">{s.name}</p>
-          ) : (
-            <p className="text-xl text-gray-400">No active season. Check back soon!</p>
-          )}
+          <p className="mx-auto mt-4 max-w-md text-ink-mid">
+            Draft your houseguests, earn points every week, and battle your friends for the top of
+            the leaderboard.
+          </p>
+        </section>
+        <div className="pb-20">
+          <EmptyState title="No active season" hint="Check back once the next season kicks off." />
         </div>
       </div>
+    );
+  }
 
-      {/* CTA Buttons */}
-      {s && (
-        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-20">
-          {!s.submissions_locked && (
-            <Link
-              href="/submit"
-              className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-4 px-10 rounded-xl text-lg transition-all duration-300 text-center shadow-[0_0_20px_rgba(250,204,21,0.2)] hover:shadow-[0_0_30px_rgba(250,204,21,0.35)]"
-            >
-              Submit Your Bracket
-            </Link>
-          )}
+  const [
+    { data: hgData },
+    { data: bracketData },
+    { data: eventsData },
+    { data: survivorsData },
+    { data: rankingsData },
+  ] = await Promise.all([
+    supabase.from('houseguests').select('*').eq('season_id', season.id),
+    supabase.from('brackets').select('*').eq('season_id', season.id),
+    supabase.from('weekly_events').select('*').eq('season_id', season.id).order('week_number'),
+    supabase.from('block_survivors').select('*, weekly_events!inner(season_id)').eq('weekly_events.season_id', season.id),
+    supabase.from('weekly_rankings').select('*').eq('season_id', season.id).order('week_number'),
+  ]);
+
+  const houseguests = (hgData || []) as Houseguest[];
+  const brackets = (bracketData || []) as Bracket[];
+  const events = (eventsData || []) as WeeklyEvent[];
+  const survivors = (survivorsData || []) as BlockSurvivor[];
+  const rankings = (rankingsData || []) as WeeklyRanking[];
+
+  const standings = brackets
+    .map((b) => calculateBracketScore(b, houseguests, events, survivors, season.houseguest_count))
+    .sort((a, b) => b.total_score - a.total_score);
+
+  const rankChanges = new Map<string, number | null>();
+  const rankWeeks = [...new Set(rankings.map((r) => r.week_number))].sort((a, b) => a - b);
+  if (rankWeeks.length >= 2) {
+    const prevWeek = rankWeeks[rankWeeks.length - 2];
+    const prevRanks = new Map(
+      rankings.filter((r) => r.week_number === prevWeek).map((r) => [r.bracket_id, r.rank])
+    );
+    standings.forEach((b, i) => {
+      const prev = prevRanks.get(b.id);
+      rankChanges.set(b.id, prev !== undefined ? prev - (i + 1) : null);
+    });
+  }
+
+  const leader = standings[0];
+  const activeCount = houseguests.filter((h) => h.status === 'active').length;
+  const weeksPlayed = new Set(events.map((e) => e.week_number)).size;
+  const latestWeek = events.length > 0 ? events[events.length - 1] : null;
+
+  const hgById = new Map(houseguests.map((h) => [h.id, h]));
+  const latestSurvivors = latestWeek
+    ? survivors.filter((s) => s.weekly_event_id === latestWeek.id).map((s) => hgById.get(s.houseguest_id)).filter(Boolean)
+    : [];
+
+  return (
+    <div className="mx-auto max-w-6xl px-4">
+      {/* Hero */}
+      <section className="relative py-14 sm:py-16">
+        <div className="bg-dots pointer-events-none absolute inset-0" aria-hidden />
+        <div
+          className="pointer-events-none absolute -top-24 right-0 h-80 w-80 rounded-full bg-gold/[0.06] blur-3xl"
+          aria-hidden
+        />
+        <p className="relative mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-gold">
+          {season.name}
+          {weeksPlayed > 0 && <span className="text-ink-dim"> &middot; Week {weeksPlayed} scored</span>}
+        </p>
+        <h1 className="relative max-w-2xl bg-gradient-to-b from-white to-ink-mid bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl">
+          Fantasy Big Brother
+        </h1>
+        <p className="relative mt-4 max-w-xl text-ink-mid">
+          Draft five houseguests, earn points for their wins and survival every week, and battle
+          your league for first place.
+        </p>
+        <div className="relative mt-8 flex flex-wrap gap-3">
           <Link
             href="/leaderboard"
-            className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-4 px-10 rounded-xl text-lg transition-all duration-300 text-center border border-gray-700 hover:border-gray-600"
+            className="inline-flex items-center justify-center rounded-xl bg-gold px-6 py-3 text-sm font-semibold text-black transition-colors hover:bg-gold-bright"
           >
-            View Leaderboard
+            View leaderboard
           </Link>
+          {!season.submissions_locked ? (
+            <Link
+              href="/submit"
+              className="inline-flex items-center justify-center rounded-xl border border-edge bg-raised px-6 py-3 text-sm font-medium text-ink transition-colors hover:border-edge-bright"
+            >
+              Submit your bracket
+            </Link>
+          ) : (
+            <span className="inline-flex items-center justify-center rounded-xl border border-edge px-6 py-3 text-sm font-medium text-ink-dim">
+              Submissions locked
+            </span>
+          )}
         </div>
-      )}
+      </section>
 
-      {/* How It Works */}
-      <div className="bg-gray-900 rounded-2xl p-8 sm:p-10 border border-gray-800">
-        <h2 className="text-2xl font-bold text-yellow-400 mb-8 text-center">How It Works</h2>
+      {/* Stat tiles */}
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatTile label="Teams" value={brackets.length} sub="brackets in play" icon={<IconUsers />} />
+        <StatTile
+          label="Houseguests left"
+          value={
+            <>
+              {activeCount}
+              <span className="text-base font-normal text-ink-dim"> / {season.houseguest_count}</span>
+            </>
+          }
+          sub="still in the house"
+          icon={<IconHome />}
+        />
+        <StatTile label="Weeks scored" value={weeksPlayed} sub="so far this season" icon={<IconCalendar />} />
+        <StatTile
+          label="Current leader"
+          value={leader ? leader.team_name : '—'}
+          sub={leader ? `${leader.total_score.toFixed(2)} points` : 'no brackets yet'}
+          icon={<IconTrophy />}
+        />
+      </section>
 
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
-          {[
-            {
-              step: '1',
-              title: 'Draft Your Team',
-              desc: 'Pick 5 houseguests ranked 1st through 5th. Your #1 pick earns 1.5x points, while your #5 pick earns 0.5x.',
-              accent: 'from-yellow-500/20 to-yellow-500/0',
-            },
-            {
-              step: '2',
-              title: 'Earn Points',
-              desc: 'Your picks earn points throughout the season based on their performance in competitions and how far they make it.',
-              accent: 'from-cyan-500/20 to-cyan-500/0',
-            },
-            {
-              step: '3',
-              title: 'Win the League',
-              desc: 'Check the leaderboard each week to see how your team stacks up against everyone else!',
-              accent: 'from-fuchsia-500/20 to-fuchsia-500/0',
-            },
-          ].map((item) => (
-            <div key={item.step} className="relative group">
-              <div className={`absolute inset-0 bg-gradient-to-b ${item.accent} rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-              <div className="relative bg-gray-800/50 rounded-xl p-6 border border-gray-700/50 hover:border-gray-600 transition-colors duration-300">
-                <div className="text-3xl font-bold text-yellow-400/30 mb-2">{item.step}</div>
-                <h3 className="text-lg font-semibold text-white mb-2">{item.title}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{item.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Scoring Section */}
-        <h3 className="text-xl font-bold text-white mb-6 text-center">Scoring</h3>
-        <div className="grid sm:grid-cols-2 gap-6 mb-8">
-          <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
-            <h4 className="font-semibold text-yellow-400 mb-3 text-sm uppercase tracking-wider">Weekly Events</h4>
-            <table className="w-full text-sm">
-              <tbody className="text-gray-300">
-                <tr className="border-b border-gray-700/50">
-                  <td className="py-2.5">HOH Win</td>
-                  <td className="py-2.5 text-right font-mono text-cyan-400">7 pts</td>
-                </tr>
-                <tr className="border-b border-gray-700/50">
-                  <td className="py-2.5">Veto Win</td>
-                  <td className="py-2.5 text-right font-mono text-cyan-400">5 pts</td>
-                </tr>
-                <tr>
-                  <td className="py-2.5">Surviving the Block</td>
-                  <td className="py-2.5 text-right font-mono text-cyan-400">2 pts</td>
-                </tr>
-              </tbody>
-            </table>
+      {/* Standings + latest week */}
+      <section className="mt-6 grid gap-6 lg:grid-cols-5">
+        <Card className="overflow-hidden lg:col-span-3">
+          <div className="flex items-center justify-between border-b border-edge px-5 py-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-mid">Standings</h2>
+            <Link href="/leaderboard" className="text-sm font-medium text-gold transition-colors hover:text-gold-bright">
+              Full leaderboard &rarr;
+            </Link>
           </div>
-          <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
-            <h4 className="font-semibold text-yellow-400 mb-3 text-sm uppercase tracking-wider">Draft Multipliers</h4>
-            <table className="w-full text-sm">
-              <tbody className="text-gray-300">
-                {(['1st', '2nd', '3rd', '4th', '5th'] as const).map((pos, i) => (
-                  <tr key={pos} className={i < 4 ? 'border-b border-gray-700/50' : ''}>
-                    <td className="py-2.5">{pos} Pick</td>
-                    <td className="py-2.5 text-right font-mono text-cyan-400">{[1.5, 1.25, 1.0, 0.75, 0.5][i]}x</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div>
-          <h4 className="font-semibold text-yellow-400 mb-3 text-sm uppercase tracking-wider text-center">Placement Points</h4>
-          <p className="text-gray-400 text-sm mb-3 text-center">
-            Points awarded based on final finish (also multiplied by draft position):
-          </p>
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 text-xs text-center">
-            {[
-              ['1st', '40'], ['2nd', '35'], ['3rd', '30'], ['4th', '27'],
-              ['5th', '25'], ['6th', '22'], ['7th', '20'], ['8th', '17'],
-              ['9th', '15'], ['10th', '12'], ['11th', '10'], ['12th', '8'],
-              ['13th', '6'], ['14th', '4'], ['15th', '2'], ['16th', '0'],
-            ].map(([place, pts], i) => (
-              <div key={place} className={`rounded-lg p-2.5 border transition-colors duration-200 ${
-                i === 0 ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400' :
-                i === 1 ? 'bg-gray-300/5 border-gray-400/20' :
-                i === 2 ? 'bg-amber-500/5 border-amber-500/20' :
-                'bg-gray-800 border-gray-700/50'
-              }`}>
-                <div className="text-gray-400">{place}</div>
-                <div className={`font-mono font-bold ${i === 0 ? 'text-yellow-400' : 'text-white'}`}>{pts}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {s?.submissions_locked && (
-        <div className="mt-10 text-center">
-          <div className="inline-block bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-6 py-3">
-            <p className="text-yellow-400 text-lg font-semibold">
-              Bracket submissions are currently locked.
+          {standings.length === 0 ? (
+            <p className="px-5 py-10 text-center text-sm text-ink-dim">
+              No brackets submitted yet — be the first.
             </p>
+          ) : (
+            <ul>
+              {standings.slice(0, 6).map((b, i) => (
+                <li key={b.id} className={i === 0 ? 'bg-gold/[0.04]' : ''}>
+                  <Link
+                    href={`/team/${b.id}`}
+                    className="flex items-center gap-4 border-b border-edge/60 px-5 py-3.5 transition-colors last:border-0 hover:bg-white/[0.02]"
+                  >
+                    <span className="w-6 text-center text-sm">
+                      <RankNumber rank={i + 1} />
+                    </span>
+                    <span className="flex-1 truncate text-sm font-medium text-ink">{b.team_name}</span>
+                    <span className="w-8 text-center text-xs">
+                      <RankChange change={rankChanges.get(b.id)} />
+                    </span>
+                    <span className="text-sm font-semibold text-gold tabular-nums">
+                      {b.total_score.toFixed(2)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <div className="border-b border-edge px-5 py-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-mid">
+              {latestWeek ? `Week ${latestWeek.week_number} results` : 'Latest week'}
+            </h2>
           </div>
+          {!latestWeek ? (
+            <p className="px-5 py-10 text-center text-sm text-ink-dim">
+              No weeks scored yet. Results appear here after the first week.
+            </p>
+          ) : (
+            <div className="space-y-4 p-5">
+              {[
+                { label: 'Head of Household', hg: hgById.get(latestWeek.hoh_winner_id ?? '') },
+                { label: 'Veto winner', hg: hgById.get(latestWeek.veto_winner_id ?? '') },
+              ].map(({ label, hg }) => (
+                <div key={label} className="flex items-center gap-3">
+                  {hg ? <Avatar name={hg.name} photoUrl={hg.photo_url} size="sm" /> : <Avatar name="?" size="sm" />}
+                  <div className="min-w-0">
+                    <p className="text-xs uppercase tracking-wider text-ink-dim">{label}</p>
+                    <p className="truncate text-sm font-medium text-ink">{hg?.name ?? 'None'}</p>
+                  </div>
+                </div>
+              ))}
+              <div className="flex items-center gap-3">
+                {(() => {
+                  const evicted = hgById.get(latestWeek.evicted_houseguest_id ?? '');
+                  return (
+                    <>
+                      {evicted ? (
+                        <Avatar name={evicted.name} photoUrl={evicted.photo_url} size="sm" />
+                      ) : (
+                        <Avatar name="?" size="sm" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs uppercase tracking-wider text-ink-dim">Evicted</p>
+                        <p className="truncate text-sm font-medium text-red-400">
+                          {evicted?.name ?? 'None'}
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+              {latestSurvivors.length > 0 && (
+                <div className="border-t border-edge pt-4">
+                  <p className="mb-2 text-xs uppercase tracking-wider text-ink-dim">
+                    Survived the block
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {latestSurvivors.map((hg) => (
+                      <span
+                        key={hg!.id}
+                        className="rounded-full border border-edge bg-raised px-2.5 py-1 text-xs text-ink-mid"
+                      >
+                        {hg!.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      </section>
+
+      {/* Scoring reference */}
+      <section className="mt-12 pb-16">
+        <h2 className="mb-1 text-xl font-bold tracking-tight text-ink">How scoring works</h2>
+        <p className="mb-6 text-sm text-ink-mid">
+          Every pick earns base points, multiplied by where you drafted them.
+        </p>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="p-5">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gold">
+              Weekly events
+            </h3>
+            <ul className="space-y-3 text-sm">
+              {[
+                ['HOH win', '7 pts'],
+                ['Veto win', '5 pts'],
+                ['Surviving the block', '2 pts'],
+              ].map(([label, pts]) => (
+                <li key={label} className="flex items-center justify-between">
+                  <span className="text-ink-mid">{label}</span>
+                  <span className="font-semibold text-ink tabular-nums">{pts}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+          <Card className="p-5">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gold">
+              Draft multipliers
+            </h3>
+            <ul className="space-y-3 text-sm">
+              {(['1st', '2nd', '3rd', '4th', '5th'] as const).map((pos, i) => (
+                <li key={pos} className="flex items-center justify-between">
+                  <span className="text-ink-mid">{pos} pick</span>
+                  <span className="font-semibold text-ink tabular-nums">
+                    {[1.5, 1.25, 1.0, 0.75, 0.5][i]}&times;
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+          <Card className="p-5">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gold">
+              Placement points
+            </h3>
+            <p className="mb-3 text-sm text-ink-mid">
+              Awarded for final finish, from 40 points for the winner down to 0 for first out.
+            </p>
+            <div className="grid grid-cols-4 gap-1.5 text-center text-xs">
+              {[
+                ['1st', '40'],
+                ['2nd', '35'],
+                ['3rd', '30'],
+                ['4th', '27'],
+                ['5th', '25'],
+                ['8th', '17'],
+                ['12th', '8'],
+                ['16th', '0'],
+              ].map(([place, pts], i) => (
+                <div
+                  key={place}
+                  className={`rounded-lg border px-1 py-1.5 ${
+                    i === 0 ? 'border-gold/30 bg-gold/[0.06]' : 'border-edge bg-raised'
+                  }`}
+                >
+                  <div className="text-ink-dim">{place}</div>
+                  <div className={`font-semibold tabular-nums ${i === 0 ? 'text-gold' : 'text-ink'}`}>
+                    {pts}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
-      )}
+      </section>
     </div>
   );
 }

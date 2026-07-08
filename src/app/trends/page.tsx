@@ -13,13 +13,42 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { Card, PageHeader, EmptyState, NoSeason, Skeleton } from '@/components/ui';
 
-const LINE_COLORS = [
-  '#facc15', '#f87171', '#60a5fa', '#34d399', '#c084fc',
-  '#fb923c', '#22d3ee', '#e879f9', '#a3e635', '#fbbf24',
-  '#f472b6', '#38bdf8', '#4ade80', '#a78bfa', '#fb7185',
-  '#2dd4bf', '#fcd34d', '#818cf8', '#86efac', '#fdba74',
+// Validated 8-slot categorical palette (dark mode). Colors are assigned to
+// entities in rank order at load and never reassigned; entities beyond the
+// 8th render muted — the checkbox legend and tooltip carry their identity.
+const SERIES_COLORS = [
+  '#3987e5', // blue
+  '#199e70', // aqua
+  '#c98500', // yellow
+  '#008300', // green
+  '#9085e9', // violet
+  '#e66767', // red
+  '#d55181', // magenta
+  '#d95926', // orange
 ];
+const MUTED_SERIES = '#4a515e';
+
+const CHART = {
+  grid: '#22252f',
+  axis: '#7d8594',
+  surface: '#12141a',
+  tooltipBg: '#1a1d25',
+  tooltipBorder: '#2f3441',
+};
+
+const tooltipStyle = {
+  backgroundColor: CHART.tooltipBg,
+  border: `1px solid ${CHART.tooltipBorder}`,
+  borderRadius: '10px',
+  color: '#f2f4f8',
+  fontSize: '13px',
+};
+
+function seriesColor(index: number) {
+  return index < SERIES_COLORS.length ? SERIES_COLORS[index] : MUTED_SERIES;
+}
 
 interface RankedBracket {
   id: string;
@@ -37,20 +66,20 @@ interface HouseguestEntry {
 
 function TrendsSkeleton() {
   return (
-    <div className="max-w-6xl mx-auto px-4 py-12">
-      <div className="h-9 w-52 animate-pulse bg-gray-800 rounded-lg mb-2" />
-      <div className="h-5 w-72 animate-pulse bg-gray-800 rounded mb-6" />
-      <div className="flex gap-2 mb-8">
-        <div className="h-10 w-32 animate-pulse bg-gray-800 rounded-lg" />
-        <div className="h-10 w-44 animate-pulse bg-gray-800 rounded-lg" />
+    <div className="mx-auto max-w-6xl px-4 py-12">
+      <Skeleton className="mb-2 h-9 w-52" />
+      <Skeleton className="mb-8 h-5 w-72" />
+      <div className="mb-8 flex gap-2">
+        <Skeleton className="h-10 w-32" />
+        <Skeleton className="h-10 w-44" />
       </div>
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 bg-gray-900 rounded-xl border border-gray-800 p-4 min-h-[400px] animate-pulse" />
-        <div className="lg:w-64 bg-gray-900 rounded-xl border border-gray-800 p-4">
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <Skeleton className="min-h-[400px] flex-1" />
+        <Card className="p-4 lg:w-64">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-6 w-full animate-pulse bg-gray-800 rounded mb-2" />
+            <Skeleton key={i} className="mb-2 h-6 w-full" />
           ))}
-        </div>
+        </Card>
       </div>
     </div>
   );
@@ -214,13 +243,13 @@ export default function TrendsPage() {
 
   const teamColorMap = useMemo(() => {
     const map = new Map<string, string>();
-    brackets.forEach((b, i) => map.set(b.id, LINE_COLORS[i % LINE_COLORS.length]));
+    brackets.forEach((b, i) => map.set(b.id, seriesColor(i)));
     return map;
   }, [brackets]);
 
   const hgColorMap = useMemo(() => {
     const map = new Map<string, string>();
-    sortedHouseguests.forEach((h, i) => map.set(h.id, LINE_COLORS[i % LINE_COLORS.length]));
+    sortedHouseguests.forEach((h, i) => map.set(h.id, seriesColor(i)));
     return map;
   }, [sortedHouseguests]);
 
@@ -259,78 +288,77 @@ export default function TrendsPage() {
   }
 
   if (!season) {
-    return (
-      <div className="max-w-6xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-3xl font-bold text-white mb-4">No Active Season</h1>
-        <p className="text-gray-400">There is no active season right now.</p>
-      </div>
-    );
+    return <NoSeason />;
   }
 
   const hasTeamData = rankings.length > 0;
   const hasHouseguestData = weeklyEvents.length > 0 && houseguests.length > 0;
 
+  const legendBtnCls =
+    'rounded-lg border border-edge bg-raised px-3 py-1.5 text-xs font-medium text-ink-mid transition-colors hover:border-edge-bright hover:text-ink';
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-12">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-1">Ranking Trends</h1>
-        <p className="text-gray-400">{season.name} &mdash; Week-by-week performance</p>
-      </div>
+    <div className="mx-auto max-w-6xl px-4 py-12">
+      <PageHeader
+        eyebrow="Analytics"
+        title="Ranking trends"
+        subtitle={`${season.name} — week-by-week performance`}
+      />
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-8">
-        <button
-          onClick={() => setActiveTab('teams')}
-          className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-            activeTab === 'teams'
-              ? 'bg-yellow-500 text-gray-900 shadow-[0_0_15px_rgba(250,204,21,0.2)]'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
-          }`}
-        >
-          Team Trends
-        </button>
-        <button
-          onClick={() => setActiveTab('houseguests')}
-          className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-            activeTab === 'houseguests'
-              ? 'bg-yellow-500 text-gray-900 shadow-[0_0_15px_rgba(250,204,21,0.2)]'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
-          }`}
-        >
-          Houseguest Trends
-        </button>
+      <div className="mb-8 inline-flex gap-1 rounded-xl border border-edge bg-surface p-1">
+        {(
+          [
+            { key: 'teams', label: 'Teams' },
+            { key: 'houseguests', label: 'Houseguests' },
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+              activeTab === tab.key ? 'bg-gold text-black' : 'text-ink-mid hover:text-ink'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* Team Trends Tab */}
+      {/* Team trends */}
       {activeTab === 'teams' && (
         !hasTeamData ? (
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
-            <p className="text-gray-500 text-lg">No weekly results have been entered yet.</p>
-            <p className="text-gray-600 text-sm mt-2">
-              Trend data will appear after the admin enters the first week&apos;s results.
-            </p>
-          </div>
+          <EmptyState
+            title="No weekly results entered yet"
+            hint="Trend data appears after the admin enters the first week's results."
+          />
         ) : (
-          <div className="flex flex-col lg:flex-row gap-6">
-            <div className="flex-1 bg-gray-900 rounded-xl border border-gray-800 p-4 min-h-[400px]">
+          <div className="flex flex-col gap-6 lg:flex-row">
+            <Card className="min-h-[400px] flex-1 p-4">
               <ResponsiveContainer width="100%" height={450}>
                 <LineChart data={teamChartData} margin={{ top: 10, right: 20, bottom: 10, left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="week" stroke="#9ca3af" tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                  <CartesianGrid stroke={CHART.grid} vertical={false} />
+                  <XAxis
+                    dataKey="week"
+                    tick={{ fill: CHART.axis, fontSize: 12 }}
+                    axisLine={{ stroke: CHART.grid }}
+                    tickLine={false}
+                  />
                   <YAxis
-                    stroke="#9ca3af"
-                    tick={{ fill: '#9ca3af', fontSize: 12 }}
+                    tick={{ fill: CHART.axis, fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
                     allowDecimals={false}
-                    label={{ value: 'Total Points', angle: -90, position: 'insideLeft', fill: '#9ca3af', fontSize: 12 }}
+                    label={{ value: 'Total points', angle: -90, position: 'insideLeft', fill: CHART.axis, fontSize: 12 }}
                   />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#fff', fontSize: '13px' }}
+                    contentStyle={tooltipStyle}
                     formatter={(value, name) => {
                       const team = brackets.find((b) => b.id === String(name));
                       return [`${value} pts`, team?.team_name || String(name)];
                     }}
                     itemSorter={(item) => -(item.value as number)}
-                    labelStyle={{ color: '#9ca3af' }}
+                    labelStyle={{ color: CHART.axis }}
                   />
                   {brackets
                     .filter((b) => selectedTeams.has(b.id))
@@ -341,66 +369,82 @@ export default function TrendsPage() {
                         dataKey={b.id}
                         stroke={teamColorMap.get(b.id)}
                         strokeWidth={2}
-                        dot={{ r: 4, fill: teamColorMap.get(b.id) }}
-                        activeDot={{ r: 6 }}
+                        dot={false}
+                        activeDot={{ r: 5, stroke: CHART.surface, strokeWidth: 2 }}
                         connectNulls
                       />
                     ))}
                 </LineChart>
               </ResponsiveContainer>
-            </div>
+            </Card>
 
-            <div className="lg:w-64 bg-gray-900 rounded-xl border border-gray-800 p-4 self-start">
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Teams</h2>
-              <div className="flex gap-2 mb-4">
-                <button onClick={selectAllTeams} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition-colors duration-200">Select All</button>
-                <button onClick={deselectAllTeams} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition-colors duration-200">Deselect All</button>
+            <Card className="self-start p-4 lg:w-64">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-dim">Teams</h2>
+              <div className="mb-4 flex gap-2">
+                <button onClick={selectAllTeams} className={legendBtnCls}>Select all</button>
+                <button onClick={deselectAllTeams} className={legendBtnCls}>Clear</button>
               </div>
-              <div className="space-y-1 max-h-[500px] overflow-y-auto">
+              <div className="max-h-[500px] space-y-0.5 overflow-y-auto">
                 {brackets.map((b) => (
-                  <label key={b.id} className="flex items-center gap-2.5 cursor-pointer hover:bg-gray-800/50 rounded-lg px-2 py-1.5 transition-colors duration-200">
-                    <input type="checkbox" checked={selectedTeams.has(b.id)} onChange={() => toggleTeam(b.id)} className="accent-yellow-400 w-4 h-4 rounded" />
-                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: teamColorMap.get(b.id) }} />
-                    <span className="text-sm text-gray-300 truncate flex-1">{b.team_name}</span>
-                    <span className="text-xs text-gray-500 font-mono flex-shrink-0">#{b.current_rank}</span>
+                  <label
+                    key={b.id}
+                    className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-raised"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedTeams.has(b.id)}
+                      onChange={() => toggleTeam(b.id)}
+                      className="h-4 w-4 rounded accent-gold"
+                    />
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: teamColorMap.get(b.id) }}
+                      aria-hidden
+                    />
+                    <span className="flex-1 truncate text-sm text-ink-mid">{b.team_name}</span>
+                    <span className="shrink-0 text-xs text-ink-dim tabular-nums">#{b.current_rank}</span>
                   </label>
                 ))}
               </div>
-            </div>
+            </Card>
           </div>
         )
       )}
 
-      {/* Houseguest Trends Tab */}
+      {/* Houseguest trends */}
       {activeTab === 'houseguests' && (
         !hasHouseguestData ? (
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
-            <p className="text-gray-500 text-lg">No weekly results have been entered yet.</p>
-            <p className="text-gray-600 text-sm mt-2">
-              Houseguest trends will appear after the admin enters the first week&apos;s results.
-            </p>
-          </div>
+          <EmptyState
+            title="No weekly results entered yet"
+            hint="Houseguest trends appear after the admin enters the first week's results."
+          />
         ) : (
-          <div className="flex flex-col lg:flex-row gap-6">
-            <div className="flex-1 bg-gray-900 rounded-xl border border-gray-800 p-4 min-h-[400px]">
+          <div className="flex flex-col gap-6 lg:flex-row">
+            <Card className="min-h-[400px] flex-1 p-4">
               <ResponsiveContainer width="100%" height={450}>
                 <LineChart data={houseguestChartData} margin={{ top: 10, right: 20, bottom: 10, left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="week" stroke="#9ca3af" tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                  <CartesianGrid stroke={CHART.grid} vertical={false} />
+                  <XAxis
+                    dataKey="week"
+                    tick={{ fill: CHART.axis, fontSize: 12 }}
+                    axisLine={{ stroke: CHART.grid }}
+                    tickLine={false}
+                  />
                   <YAxis
-                    stroke="#9ca3af"
-                    tick={{ fill: '#9ca3af', fontSize: 12 }}
+                    tick={{ fill: CHART.axis, fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
                     allowDecimals={false}
-                    label={{ value: 'Total Points', angle: -90, position: 'insideLeft', fill: '#9ca3af', fontSize: 12 }}
+                    label={{ value: 'Total points', angle: -90, position: 'insideLeft', fill: CHART.axis, fontSize: 12 }}
                   />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#fff', fontSize: '13px' }}
+                    contentStyle={tooltipStyle}
                     formatter={(value, name) => {
                       const hg = sortedHouseguests.find((h) => h.id === String(name));
                       return [`${value} pts`, hg?.name || String(name)];
                     }}
                     itemSorter={(item) => -(item.value as number)}
-                    labelStyle={{ color: '#9ca3af' }}
+                    labelStyle={{ color: CHART.axis }}
                   />
                   {sortedHouseguests
                     .filter((h) => selectedHouseguests.has(h.id))
@@ -411,32 +455,50 @@ export default function TrendsPage() {
                         dataKey={h.id}
                         stroke={hgColorMap.get(h.id)}
                         strokeWidth={2}
-                        dot={{ r: 4, fill: hgColorMap.get(h.id) }}
-                        activeDot={{ r: 6 }}
+                        dot={false}
+                        activeDot={{ r: 5, stroke: CHART.surface, strokeWidth: 2 }}
                         connectNulls={false}
                       />
                     ))}
                 </LineChart>
               </ResponsiveContainer>
-            </div>
+            </Card>
 
-            <div className="lg:w-64 bg-gray-900 rounded-xl border border-gray-800 p-4 self-start">
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Houseguests</h2>
-              <div className="flex gap-2 mb-4">
-                <button onClick={selectAllHouseguests} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition-colors duration-200">Select All</button>
-                <button onClick={deselectAllHouseguests} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition-colors duration-200">Deselect All</button>
+            <Card className="self-start p-4 lg:w-64">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-dim">Houseguests</h2>
+              <div className="mb-4 flex gap-2">
+                <button onClick={selectAllHouseguests} className={legendBtnCls}>Select all</button>
+                <button onClick={deselectAllHouseguests} className={legendBtnCls}>Clear</button>
               </div>
-              <div className="space-y-1 max-h-[500px] overflow-y-auto">
+              <div className="max-h-[500px] space-y-0.5 overflow-y-auto">
                 {sortedHouseguests.map((h) => (
-                  <label key={h.id} className="flex items-center gap-2.5 cursor-pointer hover:bg-gray-800/50 rounded-lg px-2 py-1.5 transition-colors duration-200">
-                    <input type="checkbox" checked={selectedHouseguests.has(h.id)} onChange={() => toggleHouseguest(h.id)} className="accent-yellow-400 w-4 h-4 rounded" />
-                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: hgColorMap.get(h.id) }} />
-                    <span className="text-sm text-gray-300 truncate flex-1">{h.name}</span>
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${h.status === 'active' ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                  <label
+                    key={h.id}
+                    className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-raised"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedHouseguests.has(h.id)}
+                      onChange={() => toggleHouseguest(h.id)}
+                      className="h-4 w-4 rounded accent-gold"
+                    />
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: hgColorMap.get(h.id) }}
+                      aria-hidden
+                    />
+                    <span className="flex-1 truncate text-sm text-ink-mid">{h.name}</span>
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${
+                        h.status === 'active' ? 'animate-pulse bg-emerald-400' : 'bg-red-400'
+                      }`}
+                      role="img"
+                      aria-label={h.status === 'active' ? 'Active' : 'Out'}
+                    />
                   </label>
                 ))}
               </div>
-            </div>
+            </Card>
           </div>
         )
       )}

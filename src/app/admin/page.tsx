@@ -2,7 +2,22 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Season, Houseguest, Bracket, WeeklyEvent, BlockSurvivor } from '@/lib/types';
+import { Season, Houseguest, Bracket, WeeklyEvent } from '@/lib/types';
+import {
+  Card,
+  PageHeader,
+  Skeleton,
+  Avatar,
+  StatusBadge,
+  RankNumber,
+  inputCls,
+  selectCls,
+  btnPrimary,
+  btnSecondary,
+  btnDanger,
+} from '@/components/ui';
+
+const labelCls = 'mb-2 block text-xs font-medium uppercase tracking-wider text-ink-dim';
 
 export default function AdminPage() {
   const [season, setSeason] = useState<Season | null>(null);
@@ -64,7 +79,10 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    loadData();
+    async function init() {
+      await loadData();
+    }
+    init();
   }, [loadData]);
 
   const handleLogin = async () => {
@@ -245,7 +263,6 @@ export default function AdminPage() {
     );
   };
 
-  const activeHouseguests = houseguests.filter((h) => h.status === 'active');
   const allHouseguests = houseguests;
 
   const loadWeekData = async (week: number) => {
@@ -280,60 +297,57 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-12">
-        <div className="h-9 w-52 animate-pulse bg-gray-800 rounded-lg mb-8" />
-        <div className="flex gap-2 mb-8">
+      <div className="mx-auto max-w-5xl px-4 py-12">
+        <Skeleton className="mb-8 h-9 w-52" />
+        <div className="mb-8 flex gap-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-10 w-32 animate-pulse bg-gray-800 rounded-lg" />
+            <Skeleton key={i} className="h-10 w-32" />
           ))}
         </div>
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 min-h-[300px] animate-pulse" />
+        <Skeleton className="min-h-[300px]" />
       </div>
     );
   }
 
-  // No season exists - show create form
+  // No season exists — show create form
   if (!season) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-8">Create a New Season</h1>
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 space-y-4">
+      <div className="mx-auto max-w-2xl px-4 py-12">
+        <PageHeader eyebrow="Admin" title="Create a new season" />
+        <Card className="space-y-4 p-6">
           <div>
-            <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Season Name</label>
+            <label className={labelCls}>Season name</label>
             <input
               type="text"
               value={seasonName}
               onChange={(e) => setSeasonName(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
+              className={inputCls}
               placeholder="e.g., Big Brother 27"
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Number of Houseguests</label>
+            <label className={labelCls}>Number of houseguests</label>
             <input
               type="number"
               value={houseguestCount}
               onChange={(e) => setHouseguestCount(Number(e.target.value))}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
+              className={inputCls}
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Admin Password</label>
+            <label className={labelCls}>Admin password</label>
             <input
               type="text"
               value={adminPass}
               onChange={(e) => setAdminPass(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
+              className={inputCls}
               placeholder="Set an admin password"
             />
           </div>
-          <button
-            onClick={createSeason}
-            className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(250,204,21,0.15)] hover:shadow-[0_0_20px_rgba(250,204,21,0.25)]"
-          >
-            Create Season
+          <button onClick={createSeason} className={btnPrimary}>
+            Create season
           </button>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -341,123 +355,117 @@ export default function AdminPage() {
   // Login screen
   if (!authenticated) {
     return (
-      <div className="max-w-md mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-8">Admin Login</h1>
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 space-y-4">
+      <div className="mx-auto max-w-md px-4 py-12">
+        <PageHeader eyebrow="Admin" title="Admin login" subtitle={season.name} />
+        <Card className="space-y-4 p-6">
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
+            className={inputCls}
             placeholder="Enter admin password"
+            aria-label="Admin password"
           />
-          {authError && <p className="text-red-400 text-sm">{authError}</p>}
-          <button
-            onClick={handleLogin}
-            className="w-full bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-xl transition-all duration-300"
-          >
-            Login
+          {authError && <p className="text-sm text-red-400">{authError}</p>}
+          <button onClick={handleLogin} className={`${btnPrimary} w-full`}>
+            Log in
           </button>
-        </div>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-yellow-400">Admin Dashboard</h1>
-        <span className="text-gray-400 text-sm font-mono">{season.name}</span>
-      </div>
+    <div className="mx-auto max-w-5xl px-4 py-12">
+      <PageHeader eyebrow="Admin" title="Dashboard" subtitle={season.name} />
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-8">
-        {(['season', 'weekly', 'brackets'] as const).map((tab) => (
+      <div className="mb-8 inline-flex gap-1 rounded-xl border border-edge bg-surface p-1">
+        {(
+          [
+            { key: 'season', label: 'Season setup' },
+            { key: 'weekly', label: 'Weekly results' },
+            { key: 'brackets', label: 'Brackets' },
+          ] as const
+        ).map((tab) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 ${
-              activeTab === tab
-                ? 'bg-yellow-500 text-gray-900 shadow-[0_0_15px_rgba(250,204,21,0.2)]'
-                : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+              activeTab === tab.key ? 'bg-gold text-black' : 'text-ink-mid hover:text-ink'
             }`}
           >
-            {tab === 'season' ? 'Season Setup' : tab === 'weekly' ? 'Weekly Results' : 'Brackets'}
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Season Setup */}
+      {/* Season setup */}
       {activeTab === 'season' && (
         <div className="space-y-6">
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">Season Settings</h2>
-            <div className="grid sm:grid-cols-2 gap-4 mb-4">
+          <Card className="p-6">
+            <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-ink-mid">
+              Season settings
+            </h2>
+            <div className="mb-5 grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Season Name</label>
+                <label className={labelCls}>Season name</label>
                 <input
                   type="text"
                   value={seasonName}
                   onChange={(e) => setSeasonName(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
+                  className={inputCls}
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Houseguest Count</label>
+                <label className={labelCls}>Houseguest count</label>
                 <input
                   type="number"
                   value={houseguestCount}
                   onChange={(e) => setHouseguestCount(Number(e.target.value))}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
+                  className={inputCls}
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Admin Password</label>
+                <label className={labelCls}>Admin password</label>
                 <input
                   type="text"
                   value={adminPass}
                   onChange={(e) => setAdminPass(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
+                  className={inputCls}
                 />
               </div>
             </div>
-            <div className="flex gap-3 flex-wrap">
-              <button
-                onClick={updateSeason}
-                className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-2.5 px-6 rounded-xl transition-all duration-200"
-              >
-                Save Settings
+            <div className="flex flex-wrap gap-3">
+              <button onClick={updateSeason} className={btnPrimary}>
+                Save settings
               </button>
               <button
                 onClick={toggleSubmissions}
-                className={`font-bold py-2.5 px-6 rounded-xl transition-all duration-200 ${
-                  season.submissions_locked
-                    ? 'bg-green-600 hover:bg-green-500 text-white'
-                    : 'bg-red-600 hover:bg-red-500 text-white'
-                }`}
+                className={season.submissions_locked ? btnSecondary : btnDanger}
               >
-                {season.submissions_locked ? 'Unlock Submissions' : 'Lock Submissions'}
+                {season.submissions_locked ? 'Unlock submissions' : 'Lock submissions'}
               </button>
-              <button
-                onClick={recalculateAllScores}
-                className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-2.5 px-6 rounded-xl transition-all duration-200 border border-gray-700"
-              >
-                Recalculate All Scores
+              <button onClick={recalculateAllScores} className={btnSecondary}>
+                Recalculate all scores
               </button>
             </div>
-          </div>
+          </Card>
 
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">
-              Houseguests <span className="text-gray-400 font-mono text-sm normal-case">({houseguests.length})</span>
+          <Card className="p-6">
+            <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-ink-mid">
+              Houseguests{' '}
+              <span className="font-normal normal-case text-ink-dim tabular-nums">
+                ({houseguests.length})
+              </span>
             </h2>
-            <div className="flex gap-2 mb-4">
+            <div className="mb-4 flex flex-wrap gap-2">
               <input
                 type="text"
                 value={newHouseguestName}
                 onChange={(e) => setNewHouseguestName(e.target.value)}
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
+                className={`${inputCls} flex-1 basis-48`}
                 placeholder="Houseguest name"
                 onKeyDown={(e) => e.key === 'Enter' && addHouseguest()}
               />
@@ -465,13 +473,10 @@ export default function AdminPage() {
                 type="text"
                 value={newHouseguestPhoto}
                 onChange={(e) => setNewHouseguestPhoto(e.target.value)}
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
+                className={`${inputCls} flex-1 basis-48`}
                 placeholder="Photo URL (optional)"
               />
-              <button
-                onClick={addHouseguest}
-                className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-2.5 px-5 rounded-xl transition-all duration-200"
-              >
+              <button onClick={addHouseguest} className={btnPrimary}>
                 Add
               </button>
             </div>
@@ -479,79 +484,62 @@ export default function AdminPage() {
               {houseguests.map((hg) => (
                 <div
                   key={hg.id}
-                  className="flex items-center justify-between bg-gray-800/50 rounded-lg px-4 py-2.5 border border-gray-700/50 hover:border-gray-600/50 transition-colors duration-200"
+                  className="flex items-center justify-between rounded-xl border border-edge bg-raised px-4 py-2.5 transition-colors hover:border-edge-bright"
                 >
                   <div className="flex items-center gap-3">
-                    {hg.photo_url ? (
-                      <img src={hg.photo_url} alt={hg.name} className="w-8 h-8 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-sm font-bold text-gray-400">
-                        {hg.name[0]}
-                      </div>
-                    )}
-                    <span className="text-white">{hg.name}</span>
-                    <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                        hg.status === 'active'
-                          ? 'bg-green-900/50 text-green-400'
-                          : hg.status === 'winner'
-                          ? 'bg-yellow-900/50 text-yellow-400'
-                          : hg.status === 'runner_up'
-                          ? 'bg-blue-900/50 text-blue-400'
-                          : 'bg-red-900/50 text-red-400'
-                      }`}
-                    >
-                      {hg.status}
-                    </span>
+                    <Avatar name={hg.name} photoUrl={hg.photo_url} size="sm" />
+                    <span className="font-medium text-ink">{hg.name}</span>
+                    <StatusBadge status={hg.status} />
                   </div>
                   <button
                     onClick={() => removeHouseguest(hg.id)}
-                    className="text-red-400 hover:text-red-300 text-sm transition-colors duration-200"
+                    className="text-sm font-medium text-red-400 transition-colors hover:text-red-300"
                   >
                     Remove
                   </button>
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
-      {/* Weekly Results */}
+      {/* Weekly results */}
       {activeTab === 'weekly' && (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-          <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">Enter Weekly Results</h2>
+        <Card className="p-6">
+          <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-ink-mid">
+            Enter weekly results
+          </h2>
 
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Week Number</label>
+            <label className={labelCls}>Week number</label>
             <div className="flex gap-2">
               <input
                 type="number"
                 min={1}
                 value={weekNumber}
                 onChange={(e) => setWeekNumber(Number(e.target.value))}
-                className="w-24 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white font-mono focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
+                className={`${inputCls} w-24 tabular-nums`}
               />
-              <button
-                onClick={() => loadWeekData(weekNumber)}
-                className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 px-4 rounded-lg transition-colors duration-200 text-sm border border-gray-700"
-              >
-                Load Week
+              <button onClick={() => loadWeekData(weekNumber)} className={btnSecondary}>
+                Load week
               </button>
             </div>
           </div>
 
           {weeklyEvents.length > 0 && (
-            <div className="mb-4 flex gap-2 flex-wrap items-center">
-              <span className="text-sm font-semibold text-gray-400 uppercase tracking-wider mr-2">Existing:</span>
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+              <span className="mr-1 text-xs font-medium uppercase tracking-wider text-ink-dim">
+                Existing:
+              </span>
               {weeklyEvents.map((e) => (
                 <button
                   key={e.id}
                   onClick={() => loadWeekData(e.week_number)}
-                  className={`text-sm px-3 py-1.5 rounded-lg font-mono transition-all duration-200 ${
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium tabular-nums transition-colors ${
                     weekNumber === e.week_number
-                      ? 'bg-yellow-500 text-gray-900 shadow-[0_0_10px_rgba(250,204,21,0.15)]'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
+                      ? 'bg-gold text-black'
+                      : 'border border-edge bg-raised text-ink-mid hover:border-edge-bright hover:text-ink'
                   }`}
                 >
                   Wk {e.week_number}
@@ -560,15 +548,11 @@ export default function AdminPage() {
             </div>
           )}
 
-          <div className="grid sm:grid-cols-2 gap-4 mb-4">
+          <div className="mb-4 grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">HOH Winner</label>
-              <select
-                value={hohWinnerId}
-                onChange={(e) => setHohWinnerId(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
-              >
-                <option value="">-- None --</option>
+              <label className={labelCls}>HOH winner</label>
+              <select value={hohWinnerId} onChange={(e) => setHohWinnerId(e.target.value)} className={selectCls}>
+                <option value="">None</option>
                 {allHouseguests.map((hg) => (
                   <option key={hg.id} value={hg.id}>
                     {hg.name}{hg.status !== 'active' ? ` (${hg.status})` : ''}
@@ -577,13 +561,9 @@ export default function AdminPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Veto Winner</label>
-              <select
-                value={vetoWinnerId}
-                onChange={(e) => setVetoWinnerId(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
-              >
-                <option value="">-- None --</option>
+              <label className={labelCls}>Veto winner</label>
+              <select value={vetoWinnerId} onChange={(e) => setVetoWinnerId(e.target.value)} className={selectCls}>
+                <option value="">None</option>
                 {allHouseguests.map((hg) => (
                   <option key={hg.id} value={hg.id}>
                     {hg.name}{hg.status !== 'active' ? ` (${hg.status})` : ''}
@@ -594,13 +574,9 @@ export default function AdminPage() {
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Evicted Houseguest</label>
-            <select
-              value={evictedId}
-              onChange={(e) => setEvictedId(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
-            >
-              <option value="">-- None --</option>
+            <label className={labelCls}>Evicted houseguest</label>
+            <select value={evictedId} onChange={(e) => setEvictedId(e.target.value)} className={selectCls}>
+              <option value="">None</option>
               {allHouseguests.map((hg) => (
                 <option key={hg.id} value={hg.id}>
                   {hg.name}{hg.status !== 'active' ? ` (${hg.status})` : ''}
@@ -610,30 +586,28 @@ export default function AdminPage() {
           </div>
 
           <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">
-              Block Survivors
-            </label>
-            <p className="text-xs text-gray-500 mb-3">Select all who survived the block this week</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <label className={labelCls}>Block survivors</label>
+            <p className="mb-3 text-xs text-ink-dim">Select everyone who survived the block this week.</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {allHouseguests.map((hg) => (
                 <label
                   key={hg.id}
-                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 ${
+                  className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 transition-colors ${
                     blockSurvivorIds.includes(hg.id)
-                      ? 'bg-yellow-500/15 border border-yellow-500/50'
-                      : 'bg-gray-800/50 border border-gray-700/50 hover:border-gray-600'
+                      ? 'border-gold/40 bg-gold/10'
+                      : 'border-edge bg-raised hover:border-edge-bright'
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={blockSurvivorIds.includes(hg.id)}
                     onChange={() => toggleBlockSurvivor(hg.id)}
-                    className="accent-yellow-500"
+                    className="accent-gold"
                   />
-                  <span className="text-white text-sm">
+                  <span className="truncate text-sm text-ink">
                     {hg.name}
                     {hg.status !== 'active' && (
-                      <span className="text-gray-500 text-xs ml-1">({hg.status})</span>
+                      <span className="ml-1 text-xs text-ink-dim">({hg.status})</span>
                     )}
                   </span>
                 </label>
@@ -642,80 +616,81 @@ export default function AdminPage() {
           </div>
 
           {weekMessage && (
-            <div className={`mb-4 rounded-xl p-3.5 text-sm ${
-              weekMessage.includes('Error') || weekMessage.includes('error')
-                ? 'bg-red-900/30 border border-red-500/30 text-red-400'
-                : 'bg-green-900/30 border border-green-500/30 text-green-400'
-            }`}>
+            <div
+              className={`mb-4 rounded-xl border p-3.5 text-sm ${
+                weekMessage.toLowerCase().includes('error')
+                  ? 'border-red-500/30 bg-red-500/10 text-red-400'
+                  : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+              }`}
+              role="status"
+            >
               {weekMessage}
             </div>
           )}
 
-          <div className="flex gap-3">
-            <button
-              onClick={submitWeeklyResults}
-              className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-xl transition-all duration-200"
-            >
-              Save Week {weekNumber} Results
+          <div className="flex flex-wrap gap-3">
+            <button onClick={submitWeeklyResults} className={btnPrimary}>
+              Save week {weekNumber} results
             </button>
-            <button
-              onClick={clearWeek}
-              className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-8 rounded-xl transition-all duration-200"
-            >
-              Clear Week {weekNumber}
+            <button onClick={clearWeek} className={btnDanger}>
+              Clear week {weekNumber}
             </button>
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* Brackets Management */}
+      {/* Brackets management */}
       {activeTab === 'brackets' && (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-          <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">
-            Submitted Brackets <span className="text-gray-400 font-mono text-sm normal-case">({brackets.length})</span>
+        <Card className="p-6">
+          <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-ink-mid">
+            Submitted brackets{' '}
+            <span className="font-normal normal-case text-ink-dim tabular-nums">
+              ({brackets.length})
+            </span>
           </h2>
 
           {brackets.length === 0 ? (
-            <p className="text-gray-500">No brackets submitted yet.</p>
+            <p className="text-sm text-ink-dim">No brackets submitted yet.</p>
           ) : (
             <div className="space-y-2">
               {brackets.map((b, i) => (
                 <div
                   key={b.id}
-                  className="flex items-center justify-between bg-gray-800/50 rounded-lg px-4 py-3 border border-gray-700/50 hover:border-gray-600/50 transition-colors duration-200"
+                  className="flex items-center justify-between rounded-xl border border-edge bg-raised px-4 py-3 transition-colors hover:border-edge-bright"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className={`font-mono text-sm w-8 ${
-                      i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-600' : 'text-gray-500'
-                    }`}>#{i + 1}</span>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="w-7 shrink-0 text-sm">
+                      <RankNumber rank={i + 1} />
+                    </span>
                     {editingBracketId === b.id ? (
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2">
                         <input
                           type="text"
                           value={editTeamName}
                           onChange={(e) => setEditTeamName(e.target.value)}
-                          className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
+                          className={`${inputCls} py-1.5`}
                           onKeyDown={(e) => e.key === 'Enter' && saveTeamName(b.id)}
+                          autoFocus
                         />
                         <button
                           onClick={() => saveTeamName(b.id)}
-                          className="text-green-400 hover:text-green-300 text-sm transition-colors duration-200"
+                          className="text-sm font-medium text-emerald-400 transition-colors hover:text-emerald-300"
                         >
                           Save
                         </button>
                         <button
                           onClick={() => setEditingBracketId(null)}
-                          className="text-gray-400 hover:text-gray-300 text-sm transition-colors duration-200"
+                          className="text-sm text-ink-mid transition-colors hover:text-ink"
                         >
                           Cancel
                         </button>
                       </div>
                     ) : (
-                      <span className="text-white">{b.team_name}</span>
+                      <span className="truncate font-medium text-ink">{b.team_name}</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-yellow-400 font-mono text-sm">
+                  <div className="flex shrink-0 items-center gap-4">
+                    <span className="text-sm font-semibold text-gold tabular-nums">
                       {Number(b.total_score).toFixed(2)} pts
                     </span>
                     <button
@@ -723,13 +698,13 @@ export default function AdminPage() {
                         setEditingBracketId(b.id);
                         setEditTeamName(b.team_name);
                       }}
-                      className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors duration-200"
+                      className="text-sm font-medium text-ink-mid transition-colors hover:text-ink"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => deleteBracket(b.id)}
-                      className="text-red-400 hover:text-red-300 text-sm transition-colors duration-200"
+                      className="text-sm font-medium text-red-400 transition-colors hover:text-red-300"
                     >
                       Delete
                     </button>
@@ -738,7 +713,7 @@ export default function AdminPage() {
               ))}
             </div>
           )}
-        </div>
+        </Card>
       )}
     </div>
   );

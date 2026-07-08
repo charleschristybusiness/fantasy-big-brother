@@ -6,17 +6,22 @@ import { supabase } from '@/lib/supabase';
 import { Season, Houseguest, Bracket, WeeklyEvent, BlockSurvivor } from '@/lib/types';
 import { calculateBracketScore } from '@/lib/scoring';
 import type { BracketWithPicks } from '@/lib/types';
+import { Card, PageHeader, EmptyState, NoSeason, Skeleton, Avatar, selectCls } from '@/components/ui';
+
+// Categorical slots 1 (blue) and 8 (orange) — validated CVD-safe pair on the dark surface
+const TEAM_A_COLOR = '#3987e5';
+const TEAM_B_COLOR = '#d95926';
 
 function CompareSkeleton() {
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12">
-      <div className="h-9 w-48 animate-pulse bg-gray-800 rounded-lg mb-2" />
-      <div className="h-5 w-72 animate-pulse bg-gray-800 rounded mb-8" />
-      <div className="grid sm:grid-cols-2 gap-4 mb-8">
-        <div className="h-12 animate-pulse bg-gray-800 rounded-lg" />
-        <div className="h-12 animate-pulse bg-gray-800 rounded-lg" />
+    <div className="mx-auto max-w-5xl px-4 py-12">
+      <Skeleton className="mb-2 h-9 w-48" />
+      <Skeleton className="mb-8 h-5 w-72" />
+      <div className="mb-8 grid gap-4 sm:grid-cols-2">
+        <Skeleton className="h-11" />
+        <Skeleton className="h-11" />
       </div>
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 animate-pulse min-h-[200px]" />
+      <Skeleton className="min-h-[200px]" />
     </div>
   );
 }
@@ -122,116 +127,114 @@ function CompareContent() {
   }
 
   if (!season) {
-    return (
-      <div className="max-w-5xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-3xl font-bold text-white mb-4">No Active Season</h1>
-        <p className="text-gray-400">There is no active season right now.</p>
-      </div>
-    );
+    return <NoSeason />;
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-1">Head-to-Head</h1>
-        <p className="text-gray-400">{season.name} &mdash; Compare two teams side by side</p>
-      </div>
+    <div className="mx-auto max-w-5xl px-4 py-12">
+      <PageHeader
+        eyebrow="Head-to-head"
+        title="Compare teams"
+        subtitle={`${season.name} — two teams, side by side`}
+      />
 
-      {/* Team Selectors */}
-      <div className="grid sm:grid-cols-2 gap-4 mb-8">
-        <div>
-          <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Team A</label>
-          <select
-            value={teamAId}
-            onChange={(e) => handleTeamAChange(e.target.value)}
-            className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-200"
-          >
-            <option value="">-- Select a team --</option>
-            {allBrackets.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.team_name} ({b.total_score.toFixed(2)} pts)
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Team B</label>
-          <select
-            value={teamBId}
-            onChange={(e) => handleTeamBChange(e.target.value)}
-            className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
-          >
-            <option value="">-- Select a team --</option>
-            {allBrackets.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.team_name} ({b.total_score.toFixed(2)} pts)
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* Team selectors */}
+      <div className="mb-8 grid gap-4 sm:grid-cols-2">
+        {[
+          { label: 'Team A', value: teamAId, onChange: handleTeamAChange, color: TEAM_A_COLOR },
+          { label: 'Team B', value: teamBId, onChange: handleTeamBChange, color: TEAM_B_COLOR },
+        ].map((sel) => (
+          <div key={sel.label}>
+            <label className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-ink-dim">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: sel.color }} aria-hidden />
+              {sel.label}
+            </label>
+            <select value={sel.value} onChange={(e) => sel.onChange(e.target.value)} className={selectCls}>
+              <option value="">Select a team…</option>
+              {allBrackets.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.team_name} ({b.total_score.toFixed(2)} pts)
+                </option>
+              ))}
+            </select>
+          </div>
+        ))}
       </div>
 
       {!teamA || !teamB ? (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
-          <div className="text-4xl font-bold text-gray-700 mb-3">VS</div>
-          <p className="text-gray-500 text-lg">Select two teams above to compare them.</p>
-        </div>
+        <EmptyState title="Select two teams to compare" hint="Pick Team A and Team B above." />
       ) : comparison && (
         <div className="space-y-6">
-          {/* Score Header */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-8 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-orange-500/5" />
-            <div className="relative grid grid-cols-3 items-center text-center">
+          {/* Score header */}
+          <Card className="p-8">
+            <div className="grid grid-cols-3 items-center text-center">
               <div>
-                <div className="text-lg font-semibold text-white mb-2">{teamA.team_name}</div>
-                <div className={`text-4xl font-bold font-mono ${comparison.a.total >= comparison.b.total ? 'text-yellow-400' : 'text-gray-400'}`}>
+                <p className="mb-2 truncate font-semibold text-ink">{teamA.team_name}</p>
+                <p
+                  className={`text-4xl font-semibold tabular-nums ${
+                    comparison.a.total >= comparison.b.total ? 'text-ink' : 'text-ink-dim'
+                  }`}
+                >
                   {comparison.a.total.toFixed(2)}
-                </div>
+                </p>
               </div>
+              <p className="text-sm font-bold uppercase tracking-[0.3em] text-ink-dim">vs</p>
               <div>
-                <div className="text-3xl font-black text-gray-600 tracking-widest">VS</div>
-              </div>
-              <div>
-                <div className="text-lg font-semibold text-white mb-2">{teamB.team_name}</div>
-                <div className={`text-4xl font-bold font-mono ${comparison.b.total >= comparison.a.total ? 'text-yellow-400' : 'text-gray-400'}`}>
+                <p className="mb-2 truncate font-semibold text-ink">{teamB.team_name}</p>
+                <p
+                  className={`text-4xl font-semibold tabular-nums ${
+                    comparison.b.total >= comparison.a.total ? 'text-ink' : 'text-ink-dim'
+                  }`}
+                >
                   {comparison.b.total.toFixed(2)}
-                </div>
+                </p>
               </div>
             </div>
-          </div>
+          </Card>
 
-          {/* Stat Breakdown */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <h2 className="text-lg font-bold text-white mb-5 text-center uppercase tracking-wider">Stat Breakdown</h2>
+          {/* Stat breakdown */}
+          <Card className="p-6">
+            <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-ink-mid">
+              Stat breakdown
+            </h2>
             <div className="space-y-5">
               {[
-                { label: 'HOH Wins', a: comparison.a.hohWins, b: comparison.b.hohWins },
-                { label: 'Veto Wins', a: comparison.a.vetoWins, b: comparison.b.vetoWins },
-                { label: 'Block Survivals', a: comparison.a.blockSurvivals, b: comparison.b.blockSurvivals },
-                { label: 'Active Players', a: comparison.a.activeCount, b: comparison.b.activeCount },
+                { label: 'HOH wins', a: comparison.a.hohWins, b: comparison.b.hohWins },
+                { label: 'Veto wins', a: comparison.a.vetoWins, b: comparison.b.vetoWins },
+                { label: 'Block survivals', a: comparison.a.blockSurvivals, b: comparison.b.blockSurvivals },
+                { label: 'Active players', a: comparison.a.activeCount, b: comparison.b.activeCount },
               ].map((stat) => {
                 const total = stat.a + stat.b;
                 const aPct = total > 0 ? (stat.a / total) * 100 : 50;
-                const bPct = total > 0 ? (stat.b / total) * 100 : 50;
 
                 return (
                   <div key={stat.label}>
-                    <div className="text-xs text-gray-500 mb-1.5 text-center uppercase tracking-wider">{stat.label}</div>
+                    <p className="mb-1.5 text-center text-xs uppercase tracking-wider text-ink-dim">
+                      {stat.label}
+                    </p>
                     <div className="flex items-center gap-3">
-                      <span className={`w-8 text-right font-mono text-sm ${stat.a > stat.b ? 'text-cyan-400 font-bold' : stat.a === stat.b ? 'text-gray-300' : 'text-gray-500'}`}>
+                      <span
+                        className={`w-8 text-right text-sm tabular-nums ${
+                          stat.a >= stat.b ? 'font-semibold text-ink' : 'text-ink-dim'
+                        }`}
+                      >
                         {stat.a}
                       </span>
-                      <div className="flex-1 flex h-7 rounded-lg overflow-hidden bg-gray-800">
+                      <div className="flex h-2.5 flex-1 gap-0.5 overflow-hidden rounded-full bg-raised">
                         <div
-                          className={`h-full transition-all duration-500 rounded-l-lg ${stat.a >= stat.b ? 'bg-cyan-500' : 'bg-cyan-500/30'}`}
-                          style={{ width: `${aPct}%` }}
+                          className="h-full rounded-l-full transition-all duration-500"
+                          style={{ width: `calc(${aPct}% - 1px)`, backgroundColor: TEAM_A_COLOR }}
                         />
                         <div
-                          className={`h-full transition-all duration-500 rounded-r-lg ${stat.b >= stat.a ? 'bg-orange-500' : 'bg-orange-500/30'}`}
-                          style={{ width: `${bPct}%` }}
+                          className="h-full flex-1 rounded-r-full transition-all duration-500"
+                          style={{ backgroundColor: TEAM_B_COLOR }}
                         />
                       </div>
-                      <span className={`w-8 text-left font-mono text-sm ${stat.b > stat.a ? 'text-orange-400 font-bold' : stat.b === stat.a ? 'text-gray-300' : 'text-gray-500'}`}>
+                      <span
+                        className={`w-8 text-left text-sm tabular-nums ${
+                          stat.b >= stat.a ? 'font-semibold text-ink' : 'text-ink-dim'
+                        }`}
+                      >
                         {stat.b}
                       </span>
                     </div>
@@ -239,77 +242,75 @@ function CompareContent() {
                 );
               })}
             </div>
-          </div>
+          </Card>
 
-          {/* Pick-by-Pick Comparison */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <h2 className="text-lg font-bold text-white mb-5 text-center uppercase tracking-wider">Pick-by-Pick</h2>
+          {/* Pick-by-pick */}
+          <Card className="p-6">
+            <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-ink-mid">
+              Pick by pick
+            </h2>
             <div className="space-y-3">
               {[0, 1, 2, 3, 4].map((i) => {
                 const pickA = teamA.picks[i];
                 const pickB = teamB.picks[i];
                 const aWins = pickA.pick_score > pickB.pick_score;
                 const bWins = pickB.pick_score > pickA.pick_score;
-                const tied = pickA.pick_score === pickB.pick_score;
 
                 return (
-                  <div key={i} className="bg-gray-800/50 rounded-xl p-4 border border-gray-700/50 hover:border-gray-600/50 transition-colors duration-200">
-                    <div className="text-xs text-gray-500 text-center mb-3 uppercase tracking-wider">
-                      Pick #{i + 1} &middot; {pickA.multiplier}x multiplier
-                    </div>
-                    <div className="grid grid-cols-3 items-center gap-2">
-                      {/* Team A Pick */}
-                      <div className={`text-right transition-opacity duration-300 ${aWins ? 'opacity-100' : tied ? 'opacity-80' : 'opacity-50'}`}>
-                        <div className="flex items-center justify-end gap-2">
-                          <div>
-                            <div className="text-sm font-semibold text-white">{pickA.houseguest.name}</div>
-                            <div className="text-xs text-gray-400 font-mono">
-                              {pickA.stats.hoh_wins}H {pickA.stats.veto_wins}V {pickA.stats.block_survivals}B
-                            </div>
+                  <div key={i} className="rounded-xl border border-edge bg-raised p-4">
+                    <p className="mb-3 text-center text-xs uppercase tracking-wider text-ink-dim">
+                      Pick {i + 1} &middot; {pickA.multiplier}&times; multiplier
+                    </p>
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                      {/* Team A pick */}
+                      <div className={`text-right ${bWins ? 'opacity-50' : ''}`}>
+                        <div className="flex items-center justify-end gap-2.5">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-ink">{pickA.houseguest.name}</p>
+                            <p className="text-xs text-ink-dim tabular-nums">
+                              {pickA.stats.hoh_wins} HOH &middot; {pickA.stats.veto_wins} V &middot;{' '}
+                              {pickA.stats.block_survivals} B
+                            </p>
                           </div>
-                          {pickA.houseguest.photo_url ? (
-                            <img src={pickA.houseguest.photo_url} alt={pickA.houseguest.name} className="w-10 h-10 rounded-full object-cover ring-2 ring-gray-700" />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-gray-400 text-sm font-bold ring-2 ring-gray-600">
-                              {pickA.houseguest.name[0]}
-                            </div>
-                          )}
+                          <Avatar name={pickA.houseguest.name} photoUrl={pickA.houseguest.photo_url} size="sm" />
                         </div>
-                        <div className={`text-lg font-bold font-mono mt-1 ${aWins ? 'text-cyan-400' : 'text-gray-500'}`}>
+                        <p
+                          className={`mt-1 text-lg font-semibold tabular-nums ${
+                            aWins ? 'text-ink' : 'text-ink-dim'
+                          }`}
+                        >
                           {pickA.pick_score.toFixed(2)}
-                        </div>
+                        </p>
                       </div>
 
-                      {/* VS */}
-                      <div className="text-center text-gray-600 font-black text-xs tracking-widest">VS</div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-dim">vs</p>
 
-                      {/* Team B Pick */}
-                      <div className={`text-left transition-opacity duration-300 ${bWins ? 'opacity-100' : tied ? 'opacity-80' : 'opacity-50'}`}>
-                        <div className="flex items-center gap-2">
-                          {pickB.houseguest.photo_url ? (
-                            <img src={pickB.houseguest.photo_url} alt={pickB.houseguest.name} className="w-10 h-10 rounded-full object-cover ring-2 ring-gray-700" />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-gray-400 text-sm font-bold ring-2 ring-gray-600">
-                              {pickB.houseguest.name[0]}
-                            </div>
-                          )}
-                          <div>
-                            <div className="text-sm font-semibold text-white">{pickB.houseguest.name}</div>
-                            <div className="text-xs text-gray-400 font-mono">
-                              {pickB.stats.hoh_wins}H {pickB.stats.veto_wins}V {pickB.stats.block_survivals}B
-                            </div>
+                      {/* Team B pick */}
+                      <div className={aWins ? 'opacity-50' : ''}>
+                        <div className="flex items-center gap-2.5">
+                          <Avatar name={pickB.houseguest.name} photoUrl={pickB.houseguest.photo_url} size="sm" />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-ink">{pickB.houseguest.name}</p>
+                            <p className="text-xs text-ink-dim tabular-nums">
+                              {pickB.stats.hoh_wins} HOH &middot; {pickB.stats.veto_wins} V &middot;{' '}
+                              {pickB.stats.block_survivals} B
+                            </p>
                           </div>
                         </div>
-                        <div className={`text-lg font-bold font-mono mt-1 ${bWins ? 'text-orange-400' : 'text-gray-500'}`}>
+                        <p
+                          className={`mt-1 text-lg font-semibold tabular-nums ${
+                            bWins ? 'text-ink' : 'text-ink-dim'
+                          }`}
+                        >
                           {pickB.pick_score.toFixed(2)}
-                        </div>
+                        </p>
                       </div>
                     </div>
                   </div>
                 );
               })}
             </div>
-          </div>
+          </Card>
         </div>
       )}
     </div>

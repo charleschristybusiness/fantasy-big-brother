@@ -5,6 +5,16 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Season, Houseguest, Bracket, WeeklyEvent, BlockSurvivor } from '@/lib/types';
 import { calculateBracketScore } from '@/lib/scoring';
+import {
+  Card,
+  PageHeader,
+  EmptyState,
+  NoSeason,
+  Skeleton,
+  RankNumber,
+  selectCls,
+  thCls,
+} from '@/components/ui';
 
 interface HypotheticalWeek {
   id: number;
@@ -17,18 +27,20 @@ interface HypotheticalWeek {
 
 function ForecastSkeleton() {
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12">
-      <div className="h-9 w-48 animate-pulse bg-gray-800 rounded-lg mb-2" />
-      <div className="h-5 w-72 animate-pulse bg-gray-800 rounded mb-8" />
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="lg:w-96 bg-gray-900 rounded-xl border border-gray-800 p-6 min-h-[400px] animate-pulse" />
-        <div className="flex-1 bg-gray-900 rounded-xl border border-gray-800 p-6 min-h-[400px] animate-pulse" />
+    <div className="mx-auto max-w-7xl px-4 py-12">
+      <Skeleton className="mb-2 h-9 w-48" />
+      <Skeleton className="mb-8 h-5 w-72" />
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <Skeleton className="min-h-[400px] lg:w-96" />
+        <Skeleton className="min-h-[400px] flex-1" />
       </div>
     </div>
   );
 }
 
 let nextWeekId = 1;
+
+const smallLabelCls = 'mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-dim';
 
 export default function ForecastPage() {
   const [season, setSeason] = useState<Season | null>(null);
@@ -108,16 +120,12 @@ export default function ForecastPage() {
   // Track which houseguests are evicted in prior hypothetical weeks
   const evictedByWeek = useMemo(() => {
     const evictedIds = new Set<string>();
-    // Real evicted
     for (const hg of houseguests) {
       if (hg.status === 'evicted') evictedIds.add(hg.id);
     }
-    // Build per-week cumulative eviction sets
     const result: Map<number, Set<string>> = new Map();
     for (let i = 0; i < hypotheticalWeeks.length; i++) {
-      // Available for this week = not evicted before this week
       result.set(hypotheticalWeeks[i].id, new Set(evictedIds));
-      // After this week, add this week's eviction
       if (hypotheticalWeeks[i].evictedId) {
         evictedIds.add(hypotheticalWeeks[i].evictedId);
       }
@@ -125,7 +133,6 @@ export default function ForecastPage() {
     return result;
   }, [hypotheticalWeeks, houseguests]);
 
-  // Get active houseguests for a specific hypothetical week
   function getActiveForWeek(weekId: number): Houseguest[] {
     const evicted = evictedByWeek.get(weekId) || new Set();
     return houseguests.filter((hg) => !evicted.has(hg.id));
@@ -135,13 +142,11 @@ export default function ForecastPage() {
   const hypotheticalScored = useMemo(() => {
     if (!season || brackets.length === 0) return [];
 
-    // Clone houseguests with hypothetical evictions applied
     const realEvictedCount = houseguests.filter((h) => h.status === 'evicted').length;
     let hypoEvictedCount = realEvictedCount;
 
     const hypoHouseguests = houseguests.map((hg) => ({ ...hg }));
 
-    // Build hypothetical events and survivors
     const hypoEvents: WeeklyEvent[] = [...events];
     const hypoSurvivors: BlockSurvivor[] = [...survivors];
 
@@ -161,7 +166,6 @@ export default function ForecastPage() {
         created_at: new Date().toISOString(),
       });
 
-      // Apply eviction
       if (week.evictedId) {
         hypoEvictedCount++;
         const hg = hypoHouseguests.find((h) => h.id === week.evictedId);
@@ -171,7 +175,6 @@ export default function ForecastPage() {
         }
       }
 
-      // Add block survivors
       for (const survivorId of week.blockSurvivorIds) {
         hypoSurvivors.push({
           id: `hypo-survivor-${week.id}-${survivorId}`,
@@ -186,7 +189,6 @@ export default function ForecastPage() {
       .sort((a, b) => b.total_score - a.total_score);
   }, [season, brackets, houseguests, events, survivors, hypotheticalWeeks]);
 
-  // Helpers
   function updateWeek(weekId: number, updates: Partial<HypotheticalWeek>) {
     setHypotheticalWeeks((prev) =>
       prev.map((w) => (w.id === weekId ? { ...w, ...updates } : w))
@@ -209,16 +211,7 @@ export default function ForecastPage() {
   }
 
   function removeWeek(weekId: number) {
-    setHypotheticalWeeks((prev) => {
-      const filtered = prev.filter((w) => w.id !== weekId);
-      // Clear any references to houseguests that might now be un-evicted
-      // by rebuilding downstream weeks' selections
-      return filtered.map((w) => {
-        // Check if evictedId in this week was evicted by a removed/prior week
-        // Simple approach: just keep selections, the dropdown will handle validity
-        return w;
-      });
-    });
+    setHypotheticalWeeks((prev) => prev.filter((w) => w.id !== weekId));
   }
 
   function resetAll() {
@@ -250,12 +243,7 @@ export default function ForecastPage() {
   }
 
   if (!season) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-3xl font-bold text-white mb-4">No Active Season</h1>
-        <p className="text-gray-400">There is no active season right now.</p>
-      </div>
-    );
+    return <NoSeason />;
   }
 
   const hasHypotheticalInput = hypotheticalWeeks.some(
@@ -263,22 +251,25 @@ export default function ForecastPage() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-1">Forecast</h1>
-        <p className="text-gray-400">{season.name} &mdash; What If Simulator</p>
-      </div>
+    <div className="mx-auto max-w-7xl px-4 py-12">
+      <PageHeader
+        eyebrow="What if"
+        title="Forecast"
+        subtitle={`${season.name} — simulate future weeks and watch the standings shift`}
+      />
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left: Scenario Builder */}
-        <div className="lg:w-[400px] flex-shrink-0 space-y-4">
+      <div className="flex flex-col gap-6 lg:flex-row">
+        {/* Left: scenario builder */}
+        <div className="shrink-0 space-y-4 lg:w-[400px]">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Scenario Builder</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-dim">
+              Scenario builder
+            </h2>
             <button
               onClick={resetAll}
-              className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white px-3 py-1.5 rounded-lg transition-colors duration-200 border border-gray-700"
+              className="rounded-lg border border-edge bg-raised px-3 py-1.5 text-xs font-medium text-ink-mid transition-colors hover:border-edge-bright hover:text-ink"
             >
-              Reset All
+              Reset all
             </button>
           </div>
 
@@ -286,31 +277,33 @@ export default function ForecastPage() {
             const activeHGs = getActiveForWeek(week.id);
 
             return (
-              <div key={week.id} className="bg-gray-900 rounded-xl border border-gray-800 p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-semibold text-white">
+              <Card key={week.id} className="p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="font-semibold text-ink">
                     Week {week.weekNumber}
-                    <span className="text-xs text-fuchsia-400 ml-2 font-normal">Hypothetical</span>
+                    <span className="ml-2 rounded-full border border-gold/20 bg-gold/10 px-2 py-0.5 text-xs font-medium text-gold">
+                      Hypothetical
+                    </span>
                   </h3>
                   {hypotheticalWeeks.length > 1 && (
                     <button
                       onClick={() => removeWeek(week.id)}
-                      className="text-xs text-red-400 hover:text-red-300 transition-colors duration-200"
+                      className="text-xs font-medium text-red-400 transition-colors hover:text-red-300"
                     >
                       Remove
                     </button>
                   )}
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-3.5">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">HOH Winner</label>
+                    <label className={smallLabelCls}>HOH winner</label>
                     <select
                       value={week.hohWinnerId}
                       onChange={(e) => updateWeek(week.id, { hohWinnerId: e.target.value })}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
+                      className={selectCls}
                     >
-                      <option value="">-- None --</option>
+                      <option value="">None</option>
                       {activeHGs.map((hg) => (
                         <option key={hg.id} value={hg.id}>{hg.name}</option>
                       ))}
@@ -318,13 +311,13 @@ export default function ForecastPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Veto Winner</label>
+                    <label className={smallLabelCls}>Veto winner</label>
                     <select
                       value={week.vetoWinnerId}
                       onChange={(e) => updateWeek(week.id, { vetoWinnerId: e.target.value })}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all duration-200"
+                      className={selectCls}
                     >
-                      <option value="">-- None --</option>
+                      <option value="">None</option>
                       {activeHGs.map((hg) => (
                         <option key={hg.id} value={hg.id}>{hg.name}</option>
                       ))}
@@ -332,13 +325,13 @@ export default function ForecastPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Evicted</label>
+                    <label className={smallLabelCls}>Evicted</label>
                     <select
                       value={week.evictedId}
                       onChange={(e) => updateWeek(week.id, { evictedId: e.target.value })}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all duration-200"
+                      className={selectCls}
                     >
-                      <option value="">-- None --</option>
+                      <option value="">None</option>
                       {activeHGs.map((hg) => (
                         <option key={hg.id} value={hg.id}>{hg.name}</option>
                       ))}
@@ -346,67 +339,65 @@ export default function ForecastPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Block Survivors</label>
-                    <div className="grid grid-cols-2 gap-1.5 max-h-[200px] overflow-y-auto">
+                    <label className={smallLabelCls}>Block survivors</label>
+                    <div className="grid max-h-[200px] grid-cols-2 gap-1.5 overflow-y-auto">
                       {activeHGs.map((hg) => (
                         <label
                           key={hg.id}
-                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer text-xs transition-all duration-200 ${
+                          className={`flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
                             week.blockSurvivorIds.includes(hg.id)
-                              ? 'bg-yellow-500/15 border border-yellow-500/40'
-                              : 'bg-gray-800/50 border border-gray-700/50 hover:border-gray-600'
+                              ? 'border-gold/40 bg-gold/10'
+                              : 'border-edge bg-raised hover:border-edge-bright'
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={week.blockSurvivorIds.includes(hg.id)}
                             onChange={() => toggleBlockSurvivor(week.id, hg.id)}
-                            className="accent-yellow-500 w-3.5 h-3.5"
+                            className="h-3.5 w-3.5 accent-gold"
                           />
-                          <span className="text-gray-300 truncate">{hg.name}</span>
+                          <span className="truncate text-ink-mid">{hg.name}</span>
                         </label>
                       ))}
                     </div>
                   </div>
                 </div>
-              </div>
+              </Card>
             );
           })}
 
           <button
             onClick={addWeek}
-            className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white font-semibold py-3 rounded-xl transition-all duration-200 border border-gray-700 hover:border-gray-600 text-sm"
+            className="w-full rounded-xl border border-dashed border-edge-bright py-3 text-sm font-medium text-ink-mid transition-colors hover:border-gold/40 hover:text-ink"
           >
-            + Add Another Week
+            + Add another week
           </button>
         </div>
 
-        {/* Right: Hypothetical Leaderboard */}
+        {/* Right: hypothetical leaderboard */}
         <div className="flex-1">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-              {hasHypotheticalInput ? 'Hypothetical Leaderboard' : 'Current Leaderboard'}
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-dim">
+              {hasHypotheticalInput ? 'Hypothetical leaderboard' : 'Current leaderboard'}
             </h2>
             {hasHypotheticalInput && (
-              <span className="text-xs text-fuchsia-400 bg-fuchsia-500/10 px-2.5 py-1 rounded-full border border-fuchsia-500/20">
-                What If Mode
+              <span className="rounded-full border border-gold/20 bg-gold/10 px-2.5 py-1 text-xs font-medium text-gold">
+                What-if mode
               </span>
             )}
           </div>
 
           {hypotheticalScored.length === 0 ? (
-            <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
-              <p className="text-gray-500 text-lg">No brackets submitted yet.</p>
-            </div>
+            <EmptyState title="No brackets submitted yet" />
           ) : (
-            <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-              <table className="w-full">
+            <Card className="overflow-hidden">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-800 text-sm text-gray-500 uppercase tracking-wider">
-                    <th className="px-4 py-3.5 text-left w-16 font-semibold">Rank</th>
-                    <th className="px-4 py-3.5 w-16 text-center font-semibold">+/-</th>
-                    <th className="px-4 py-3.5 text-left font-semibold">Team Name</th>
-                    <th className="px-4 py-3.5 text-right font-semibold">Score</th>
+                  <tr className="border-b border-edge">
+                    <th className={`${thCls} w-16`}>Rank</th>
+                    <th className={`${thCls} w-16 text-center`}>+/-</th>
+                    <th className={thCls}>Team</th>
+                    <th className={`${thCls} text-right`}>Score</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -419,49 +410,35 @@ export default function ForecastPage() {
                     return (
                       <tr
                         key={bracket.id}
-                        className={`border-b border-gray-800/50 transition-all duration-200 ${
+                        className={`border-b border-edge/60 transition-colors last:border-0 ${
                           moved && change > 0
-                            ? 'bg-green-500/5 hover:bg-green-500/10'
+                            ? 'bg-emerald-500/[0.05] hover:bg-emerald-500/10'
                             : moved && change < 0
-                            ? 'bg-red-500/5 hover:bg-red-500/10'
-                            : 'hover:bg-gray-800/50'
+                            ? 'bg-red-500/[0.05] hover:bg-red-500/10'
+                            : 'hover:bg-white/[0.02]'
                         }`}
                       >
                         <td className="px-4 py-3">
-                          <span
-                            className={`font-mono ${
-                              hypoRank === 1
-                                ? 'text-yellow-400'
-                                : hypoRank === 2
-                                ? 'text-gray-300'
-                                : hypoRank === 3
-                                ? 'text-amber-600'
-                                : 'text-gray-500'
-                            }`}
-                          >
-                            #{hypoRank}
-                          </span>
+                          <RankNumber rank={hypoRank} />
                         </td>
-                        <td className="px-4 py-3 text-center text-sm font-mono">
-                          {!hasHypotheticalInput ? (
-                            <span className="text-gray-600">&mdash;</span>
+                        <td className="px-4 py-3 text-center">
+                          {!hasHypotheticalInput || change === 0 ? (
+                            <span className="text-ink-dim">&mdash;</span>
                           ) : change > 0 ? (
-                            <span className="text-green-400 font-bold">&uarr;{change}</span>
-                          ) : change < 0 ? (
-                            <span className="text-red-400 font-bold">&darr;{change}</span>
+                            <span className="font-semibold text-emerald-400 tabular-nums">&uarr;{change}</span>
                           ) : (
-                            <span className="text-gray-600">&mdash;</span>
+                            <span className="font-semibold text-red-400 tabular-nums">&darr;{Math.abs(change)}</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           <Link
                             href={`/team/${bracket.id}`}
-                            className="text-white hover:text-yellow-400 transition-colors duration-200"
+                            className="font-medium text-ink transition-colors hover:text-gold"
                           >
                             {bracket.team_name}
                           </Link>
                         </td>
-                        <td className="px-4 py-3 text-right font-mono text-yellow-400">
+                        <td className="px-4 py-3 text-right font-semibold text-gold tabular-nums">
                           {bracket.total_score.toFixed(2)}
                         </td>
                       </tr>
@@ -469,10 +446,10 @@ export default function ForecastPage() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </Card>
           )}
 
-          <p className="text-gray-500 text-sm mt-4 text-center font-mono">
+          <p className="mt-4 text-center text-sm text-ink-dim tabular-nums">
             {brackets.length} team{brackets.length !== 1 ? 's' : ''} total
           </p>
         </div>
