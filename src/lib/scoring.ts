@@ -6,26 +6,29 @@ import {
   HouseguestStats,
   BracketWithPicks,
   DRAFT_MULTIPLIERS,
-  PLACEMENT_POINTS,
+  PLACEMENT_POINTS_BY_PLACE,
   POINT_VALUES,
 } from './types';
 
+function pointsForPlace(place: number): number {
+  return PLACEMENT_POINTS_BY_PLACE[place] ?? 0;
+}
+
 export function getPlacementPoints(houseguest: Houseguest, totalHouseguests: number, evictedCount: number = 0): number {
   if (houseguest.status === 'winner') {
-    return PLACEMENT_POINTS[totalHouseguests] || 40;
+    return pointsForPlace(1);
   }
   if (houseguest.status === 'runner_up') {
-    return PLACEMENT_POINTS[totalHouseguests - 1] || 35;
+    return pointsForPlace(2);
   }
   if (houseguest.eviction_order !== null) {
-    return PLACEMENT_POINTS[houseguest.eviction_order] || 0;
+    // eviction_order 1 = first out = last place
+    return pointsForPlace(totalHouseguests - houseguest.eviction_order + 1);
   }
-  // Active houseguests get minimum guaranteed placement points
-  // If 5 have been evicted from 16, remaining players are guaranteed at least 6th place
-  // which corresponds to eviction_order = totalHouseguests - evictedCount
+  // Active houseguests get minimum guaranteed placement points:
+  // with 5 of 17 evicted, everyone left is guaranteed at least 12th place
   if (houseguest.status === 'active' && evictedCount > 0) {
-    const minPlacement = evictedCount + 1;
-    return PLACEMENT_POINTS[minPlacement] || 0;
+    return pointsForPlace(totalHouseguests - evictedCount);
   }
   return 0;
 }

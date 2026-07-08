@@ -79,23 +79,24 @@ export interface BracketWithPicks extends Bracket {
 
 export const DRAFT_MULTIPLIERS = [1.5, 1.25, 1.0, 0.75, 0.5] as const;
 
-export const PLACEMENT_POINTS: Record<number, number> = {
-  1: 0,   // 16th place (first out)
-  2: 2,   // 15th
-  3: 4,   // 14th
-  4: 6,   // 13th
-  5: 8,   // 12th
-  6: 10,  // 11th
-  7: 12,  // 10th
-  8: 15,  // 9th
-  9: 17,  // 8th
-  10: 20, // 7th
-  11: 22, // 6th
-  12: 25, // 5th
-  13: 27, // 4th
-  14: 30, // 3rd
-  15: 35, // 2nd (runner-up)
-  16: 40, // 1st (winner)
+// Points by final placement (1 = winner), independent of cast size.
+// Places 16th and beyond earn 0 — works for 16- and 17-houseguest seasons alike.
+export const PLACEMENT_POINTS_BY_PLACE: Record<number, number> = {
+  1: 40,
+  2: 35,
+  3: 30,
+  4: 27,
+  5: 25,
+  6: 22,
+  7: 20,
+  8: 17,
+  9: 15,
+  10: 12,
+  11: 10,
+  12: 8,
+  13: 6,
+  14: 4,
+  15: 2,
 };
 
 export const POINT_VALUES = {

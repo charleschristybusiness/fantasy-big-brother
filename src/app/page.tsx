@@ -434,7 +434,7 @@ export default async function HomePage() {
                 ['5th', '25'],
                 ['8th', '17'],
                 ['12th', '8'],
-                ['16th', '0'],
+                ['Last', '0'],
               ].map(([place, pts], i) => (
                 <div
                   key={place}
