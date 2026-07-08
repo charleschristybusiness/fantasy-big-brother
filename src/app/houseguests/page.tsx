@@ -72,7 +72,8 @@ export default function HouseguestsPage() {
       ]);
 
       const houseguests = (hgData || []) as Houseguest[];
-      const events = (eventsData || []) as WeeklyEvent[];
+      // exclude the week-0 house-state sentinel from week-over-week comparisons
+      const events = ((eventsData || []) as WeeklyEvent[]).filter((e) => e.week_number >= 1);
       const survivors = (survivorsData || []) as BlockSurvivor[];
       const evictedCount = houseguests.filter((h) => h.status === 'evicted').length;
 

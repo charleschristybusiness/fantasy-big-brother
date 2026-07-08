@@ -28,7 +28,14 @@ export default function AdminPage() {
   const [brackets, setBrackets] = useState<Bracket[]>([]);
   const [weeklyEvents, setWeeklyEvents] = useState<WeeklyEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'season' | 'weekly' | 'brackets'>('season');
+  const [activeTab, setActiveTab] = useState<'season' | 'house' | 'weekly' | 'brackets'>('season');
+
+  // Live house state (week-0 sentinel event — display only, never scored)
+  const [houseEventId, setHouseEventId] = useState<string | null>(null);
+  const [houseHohId, setHouseHohId] = useState('');
+  const [houseVetoId, setHouseVetoId] = useState('');
+  const [houseNomineeIds, setHouseNomineeIds] = useState<string[]>([]);
+  const [houseMessage, setHouseMessage] = useState('');
 
   // Season setup
   const [seasonName, setSeasonName] = useState('');
@@ -72,7 +79,23 @@ export default function AdminPage() {
 
       setHouseguests((hgData as Houseguest[]) || []);
       setBrackets((bData as Bracket[]) || []);
-      setWeeklyEvents((evData as WeeklyEvent[]) || []);
+
+      const allEvents = (evData as WeeklyEvent[]) || [];
+      setWeeklyEvents(allEvents.filter((e) => e.week_number >= 1));
+
+      const houseEvent = allEvents.find((e) => e.week_number === 0) || null;
+      setHouseEventId(houseEvent?.id ?? null);
+      setHouseHohId(houseEvent?.hoh_winner_id ?? '');
+      setHouseVetoId(houseEvent?.veto_winner_id ?? '');
+      if (houseEvent) {
+        const { data: noms } = await supabase
+          .from('block_survivors')
+          .select('houseguest_id')
+          .eq('weekly_event_id', houseEvent.id);
+        setHouseNomineeIds(((noms || []) as { houseguest_id: string }[]).map((n) => n.houseguest_id));
+      } else {
+        setHouseNomineeIds([]);
+      }
     }
 
     setLoading(false);
@@ -263,7 +286,78 @@ export default function AdminPage() {
     );
   };
 
+  const toggleHouseNominee = (hgId: string) => {
+    setHouseNomineeIds((prev) =>
+      prev.includes(hgId) ? prev.filter((id) => id !== hgId) : [...prev, hgId]
+    );
+  };
+
+  const saveHouseState = async () => {
+    if (!season) return;
+    setHouseMessage('');
+
+    let eventId = houseEventId;
+    if (eventId) {
+      const { error } = await supabase
+        .from('weekly_events')
+        .update({
+          hoh_winner_id: houseHohId || null,
+          veto_winner_id: houseVetoId || null,
+          evicted_houseguest_id: null,
+        })
+        .eq('id', eventId);
+      if (error) {
+        setHouseMessage('Error saving house state.');
+        return;
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('weekly_events')
+        .insert({
+          season_id: season.id,
+          week_number: 0,
+          hoh_winner_id: houseHohId || null,
+          veto_winner_id: houseVetoId || null,
+        })
+        .select()
+        .single();
+      if (error || !data) {
+        setHouseMessage('Error saving house state.');
+        return;
+      }
+      eventId = data.id as string;
+      setHouseEventId(eventId);
+    }
+
+    await supabase.from('block_survivors').delete().eq('weekly_event_id', eventId);
+    if (houseNomineeIds.length > 0) {
+      await supabase
+        .from('block_survivors')
+        .insert(houseNomineeIds.map((hgId) => ({ weekly_event_id: eventId, houseguest_id: hgId })));
+    }
+
+    setHouseMessage('House state updated — it is now live on the dashboard.');
+  };
+
+  const clearHouseState = async () => {
+    if (!houseEventId) {
+      setHouseHohId('');
+      setHouseVetoId('');
+      setHouseNomineeIds([]);
+      return;
+    }
+    setHouseMessage('');
+    await supabase.from('block_survivors').delete().eq('weekly_event_id', houseEventId);
+    await supabase.from('weekly_events').delete().eq('id', houseEventId);
+    setHouseEventId(null);
+    setHouseHohId('');
+    setHouseVetoId('');
+    setHouseNomineeIds([]);
+    setHouseMessage('House state cleared.');
+  };
+
   const allHouseguests = houseguests;
+  const activeHouseguests = houseguests.filter((h) => h.status === 'active');
 
   const loadWeekData = async (week: number) => {
     if (!season) return;
@@ -385,6 +479,7 @@ export default function AdminPage() {
         {(
           [
             { key: 'season', label: 'Season setup' },
+            { key: 'house', label: 'House state' },
             { key: 'weekly', label: 'Weekly results' },
             { key: 'brackets', label: 'Brackets' },
           ] as const
@@ -502,6 +597,87 @@ export default function AdminPage() {
             </div>
           </Card>
         </div>
+      )}
+
+      {/* House state */}
+      {activeTab === 'house' && (
+        <Card className="p-6">
+          <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-ink-mid">
+            The house right now
+          </h2>
+          <p className="mb-5 text-xs text-ink-dim">
+            Shown on the dashboard so the league sees how the house stands today. Display only
+            &mdash; nobody scores points for being on the block, only for surviving it via Weekly
+            Results. Clear this after eviction night, then set the new HOH.
+          </p>
+
+          <div className="mb-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className={labelCls}>Current HOH</label>
+              <select value={houseHohId} onChange={(e) => setHouseHohId(e.target.value)} className={selectCls}>
+                <option value="">None</option>
+                {activeHouseguests.map((hg) => (
+                  <option key={hg.id} value={hg.id}>{hg.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Current veto holder</label>
+              <select value={houseVetoId} onChange={(e) => setHouseVetoId(e.target.value)} className={selectCls}>
+                <option value="">None</option>
+                {activeHouseguests.map((hg) => (
+                  <option key={hg.id} value={hg.id}>{hg.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <label className={labelCls}>On the block</label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {activeHouseguests.map((hg) => (
+                <label
+                  key={hg.id}
+                  className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 transition-colors ${
+                    houseNomineeIds.includes(hg.id)
+                      ? 'border-red-400/40 bg-red-400/10'
+                      : 'border-edge bg-raised hover:border-edge-bright'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={houseNomineeIds.includes(hg.id)}
+                    onChange={() => toggleHouseNominee(hg.id)}
+                    className="accent-red-400"
+                  />
+                  <span className="truncate text-sm text-ink">{hg.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {houseMessage && (
+            <div
+              className={`mb-4 rounded-xl border p-3.5 text-sm ${
+                houseMessage.toLowerCase().includes('error')
+                  ? 'border-red-500/30 bg-red-500/10 text-red-400'
+                  : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+              }`}
+              role="status"
+            >
+              {houseMessage}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3">
+            <button onClick={saveHouseState} className={btnPrimary}>
+              Update house state
+            </button>
+            <button onClick={clearHouseState} className={btnDanger}>
+              Clear house state
+            </button>
+          </div>
+        </Card>
       )}
 
       {/* Weekly results */}

@@ -163,6 +163,14 @@ Follow the dataviz method: form first, color by job, validated palette, thin mar
 - **Never** use animations longer than 500ms
 - **Never** cycle or reassign chart series colors when filters change
 
+## Data Conventions
+- **Week-0 sentinel**: the `weekly_events` row with `week_number = 0` holds the LIVE house
+  state (current HOH via `hoh_winner_id`, veto holder via `veto_winner_id`, nominees as
+  `block_survivors` rows). It is display-only: `getHouseguestStats` in `scoring.ts` excludes
+  week-0 events/survivors from all point math, and pages filter `week_number >= 1` when
+  enumerating weeks. Managed from the admin "House state" tab; rendered as the dashboard's
+  "The house right now" board. Real scored weeks always start at 1.
+
 ## File Structure
 - Pages: `src/app/*/page.tsx` (client pages use `'use client'`; home is a server component)
 - Shared UI: `src/components/` — `nav.tsx` (header), `ui.tsx` (primitives + class strings)

@@ -40,9 +40,15 @@ export function getHouseguestStats(
   totalHouseguests: number,
   evictedCount: number = 0
 ): HouseguestStats {
-  const hoh_wins = weeklyEvents.filter((e) => e.hoh_winner_id === houseguest.id).length;
-  const veto_wins = weeklyEvents.filter((e) => e.veto_winner_id === houseguest.id).length;
-  const block_survivals = blockSurvivors.filter((bs) => bs.houseguest_id === houseguest.id).length;
+  // week_number 0 is the live house-state sentinel (current HOH / veto holder /
+  // nominees for display) — it never awards points
+  const scoredEvents = weeklyEvents.filter((e) => e.week_number >= 1);
+  const scoredEventIds = new Set(scoredEvents.map((e) => e.id));
+  const scoredSurvivors = blockSurvivors.filter((bs) => scoredEventIds.has(bs.weekly_event_id));
+
+  const hoh_wins = scoredEvents.filter((e) => e.hoh_winner_id === houseguest.id).length;
+  const veto_wins = scoredEvents.filter((e) => e.veto_winner_id === houseguest.id).length;
+  const block_survivals = scoredSurvivors.filter((bs) => bs.houseguest_id === houseguest.id).length;
   const placement_points = getPlacementPoints(houseguest, totalHouseguests, evictedCount);
 
   const base_score =

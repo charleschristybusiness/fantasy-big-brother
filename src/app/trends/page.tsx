@@ -151,7 +151,8 @@ export default function TrendsPage() {
 
       const hgs = (hgData || []) as Houseguest[];
       setHouseguests(hgs);
-      setWeeklyEvents((eventsData || []) as WeeklyEvent[]);
+      // exclude the week-0 house-state sentinel from trend weeks
+      setWeeklyEvents(((eventsData || []) as WeeklyEvent[]).filter((e) => e.week_number >= 1));
       setBlockSurvivors((survivorsData || []) as BlockSurvivor[]);
       setSelectedHouseguests(new Set(hgs.map((h) => h.id)));
 

@@ -81,7 +81,8 @@ export default function ForecastPage() {
       ]);
 
       const hgs = (hgData || []) as Houseguest[];
-      const evts = (eventsData || []) as WeeklyEvent[];
+      // exclude the week-0 house-state sentinel from the forecast baseline
+      const evts = ((eventsData || []) as WeeklyEvent[]).filter((e) => e.week_number >= 1);
       setHouseguests(hgs);
       setBrackets((bracketData || []) as Bracket[]);
       setEvents(evts);

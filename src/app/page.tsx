@@ -17,6 +17,44 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+function HouseSlot({
+  hg,
+  label,
+  labelCls,
+  ringCls,
+}: {
+  hg: Houseguest;
+  label?: string;
+  labelCls?: string;
+  ringCls: string;
+}) {
+  return (
+    <div className="flex flex-col items-center text-center">
+      {label && (
+        <p className={`mb-4 text-xs font-semibold uppercase tracking-[0.15em] ${labelCls}`}>
+          {label}
+        </p>
+      )}
+      {hg.photo_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={hg.photo_url}
+          alt={hg.name}
+          className={`h-24 w-24 rounded-full object-cover ring-2 sm:h-28 sm:w-28 ${ringCls}`}
+        />
+      ) : (
+        <div
+          className={`flex h-24 w-24 items-center justify-center rounded-full bg-raised text-3xl font-semibold text-ink-mid ring-2 sm:h-28 sm:w-28 ${ringCls}`}
+          aria-hidden
+        >
+          {hg.name[0]?.toUpperCase()}
+        </div>
+      )}
+      <p className="mt-3 font-semibold text-ink">{hg.name}</p>
+    </div>
+  );
+}
+
 export default async function HomePage() {
   const { data: seasonData } = await supabase
     .from('seasons')
@@ -65,9 +103,13 @@ export default async function HomePage() {
 
   const houseguests = (hgData || []) as Houseguest[];
   const brackets = (bracketData || []) as Bracket[];
-  const events = (eventsData || []) as WeeklyEvent[];
+  const allEvents = (eventsData || []) as WeeklyEvent[];
   const survivors = (survivorsData || []) as BlockSurvivor[];
   const rankings = (rankingsData || []) as WeeklyRanking[];
+
+  // week 0 = live house state (current HOH / veto / nominees), never scored
+  const houseStateEvent = allEvents.find((e) => e.week_number === 0) ?? null;
+  const events = allEvents.filter((e) => e.week_number >= 1);
 
   const standings = brackets
     .map((b) => calculateBracketScore(b, houseguests, events, survivors, season.houseguest_count))
@@ -92,6 +134,17 @@ export default async function HomePage() {
   const latestWeek = events.length > 0 ? events[events.length - 1] : null;
 
   const hgById = new Map(houseguests.map((h) => [h.id, h]));
+
+  const currentHoh = houseStateEvent ? hgById.get(houseStateEvent.hoh_winner_id ?? '') : undefined;
+  const currentVeto = houseStateEvent ? hgById.get(houseStateEvent.veto_winner_id ?? '') : undefined;
+  const nominees = houseStateEvent
+    ? survivors
+        .filter((s) => s.weekly_event_id === houseStateEvent.id)
+        .map((s) => hgById.get(s.houseguest_id))
+        .filter((h): h is Houseguest => Boolean(h))
+    : [];
+  const showHouseBoard = Boolean(currentHoh || currentVeto || nominees.length > 0);
+
   const latestSurvivors = latestWeek
     ? survivors.filter((s) => s.weekly_event_id === latestWeek.id).map((s) => hgById.get(s.houseguest_id)).filter(Boolean)
     : [];
@@ -201,6 +254,56 @@ export default async function HomePage() {
           )}
         </div>
       </section>
+
+      {/* The house right now */}
+      {showHouseBoard && (
+        <section className="mb-6">
+          <Card className="relative overflow-hidden p-6 sm:p-8">
+            <div
+              className="pointer-events-none absolute inset-0 bg-gradient-to-r from-gold/[0.04] via-transparent to-red-500/[0.04]"
+              aria-hidden
+            />
+            <div className="relative">
+              <div className="mb-7 flex items-center justify-center gap-2.5">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gold" aria-hidden />
+                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-ink-mid">
+                  The house right now
+                </h2>
+              </div>
+              <div className="flex flex-wrap items-start justify-center gap-x-12 gap-y-8 sm:gap-x-16">
+                {currentHoh && (
+                  <HouseSlot
+                    hg={currentHoh}
+                    label="Head of Household"
+                    labelCls="text-gold"
+                    ringCls="ring-gold"
+                  />
+                )}
+                {currentVeto && (
+                  <HouseSlot
+                    hg={currentVeto}
+                    label="Veto holder"
+                    labelCls="text-silver"
+                    ringCls="ring-silver/70"
+                  />
+                )}
+                {nominees.length > 0 && (
+                  <div className="flex flex-col items-center">
+                    <p className="mb-4 text-xs font-semibold uppercase tracking-[0.15em] text-red-400">
+                      On the block
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-x-8 gap-y-6">
+                      {nominees.map((hg) => (
+                        <HouseSlot key={hg.id} hg={hg} ringCls="ring-red-400/70" />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        </section>
+      )}
 
       {/* Stat tiles */}
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
