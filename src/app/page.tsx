@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Season, Houseguest, Bracket, WeeklyEvent, BlockSurvivor, WeeklyRanking } from '@/lib/types';
-import { calculateBracketScore } from '@/lib/scoring';
+import { calculateBracketScore, getHouseguestStats } from '@/lib/scoring';
 import {
   Card,
   Avatar,
@@ -95,6 +95,70 @@ export default async function HomePage() {
   const latestSurvivors = latestWeek
     ? survivors.filter((s) => s.weekly_event_id === latestWeek.id).map((s) => hgById.get(s.houseguest_id)).filter(Boolean)
     : [];
+
+  // --- Weekly recap ---
+  const baseScoresThrough = (week: number) => {
+    const evts = events.filter((e) => e.week_number <= week);
+    const eventIds = new Set(evts.map((e) => e.id));
+    const survs = survivors.filter((s) => eventIds.has(s.weekly_event_id));
+    const evicted = evts.filter((e) => e.evicted_houseguest_id).length;
+    return new Map(
+      houseguests.map((h) => [
+        h.id,
+        getHouseguestStats(h, evts, survs, season.houseguest_count, evicted).base_score,
+      ])
+    );
+  };
+
+  let mvp: { name: string; delta: number } | null = null;
+  let hotTeam: { name: string; delta: number } | null = null;
+  let riser: { name: string; change: number } | null = null;
+  let faller: { name: string; change: number } | null = null;
+
+  if (latestWeek) {
+    const wk = latestWeek.week_number;
+
+    const curr = baseScoresThrough(wk);
+    const prev = baseScoresThrough(wk - 1);
+    for (const hg of houseguests) {
+      const delta = (curr.get(hg.id) ?? 0) - (prev.get(hg.id) ?? 0);
+      if (delta > 0 && (!mvp || delta > mvp.delta)) {
+        mvp = { name: hg.name, delta };
+      }
+    }
+
+    const currTotals = new Map(
+      rankings.filter((r) => r.week_number === wk).map((r) => [r.bracket_id, r.total_score])
+    );
+    const prevTotals = new Map(
+      rankings.filter((r) => r.week_number === wk - 1).map((r) => [r.bracket_id, r.total_score])
+    );
+    for (const b of standings) {
+      const currTotal = currTotals.get(b.id);
+      if (currTotal === undefined) continue;
+      // Late-submitted brackets have no prior-week snapshot — skip them rather
+      // than treating their entire total as one week's gain
+      const prevTotal = wk > 1 ? prevTotals.get(b.id) : 0;
+      if (prevTotal === undefined) continue;
+      const delta = currTotal - prevTotal;
+      if (delta > 0 && (!hotTeam || delta > hotTeam.delta)) {
+        hotTeam = { name: b.team_name, delta };
+      }
+    }
+
+    for (const b of standings) {
+      const change = rankChanges.get(b.id);
+      if (change === null || change === undefined) continue;
+      if (change > 0 && (!riser || change > riser.change)) {
+        riser = { name: b.team_name, change };
+      }
+      if (change < 0 && (!faller || change < faller.change)) {
+        faller = { name: b.team_name, change };
+      }
+    }
+  }
+
+  const hasRecap = Boolean(mvp || hotTeam || riser || faller);
 
   return (
     <div className="mx-auto max-w-6xl px-4">
@@ -258,6 +322,56 @@ export default async function HomePage() {
                       </span>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {hasRecap && (
+                <div className="space-y-2.5 border-t border-edge pt-4">
+                  <p className="text-xs uppercase tracking-wider text-ink-dim">Recap</p>
+                  {mvp && (
+                    <div className="flex items-baseline justify-between gap-3 text-sm">
+                      <span className="shrink-0 text-ink-dim">Week MVP</span>
+                      <span className="truncate text-right font-medium text-ink">
+                        {mvp.name}{' '}
+                        <span className="font-semibold text-emerald-400 tabular-nums">
+                          +{mvp.delta} pts
+                        </span>
+                      </span>
+                    </div>
+                  )}
+                  {hotTeam && (
+                    <div className="flex items-baseline justify-between gap-3 text-sm">
+                      <span className="shrink-0 text-ink-dim">Team of the week</span>
+                      <span className="truncate text-right font-medium text-ink">
+                        {hotTeam.name}{' '}
+                        <span className="font-semibold text-emerald-400 tabular-nums">
+                          +{hotTeam.delta.toFixed(2)}
+                        </span>
+                      </span>
+                    </div>
+                  )}
+                  {riser && (
+                    <div className="flex items-baseline justify-between gap-3 text-sm">
+                      <span className="shrink-0 text-ink-dim">Biggest riser</span>
+                      <span className="truncate text-right font-medium text-ink">
+                        {riser.name}{' '}
+                        <span className="font-semibold text-emerald-400 tabular-nums">
+                          &uarr;{riser.change}
+                        </span>
+                      </span>
+                    </div>
+                  )}
+                  {faller && (
+                    <div className="flex items-baseline justify-between gap-3 text-sm">
+                      <span className="shrink-0 text-ink-dim">Biggest faller</span>
+                      <span className="truncate text-right font-medium text-ink">
+                        {faller.name}{' '}
+                        <span className="font-semibold text-red-400 tabular-nums">
+                          &darr;{Math.abs(faller.change)}
+                        </span>
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

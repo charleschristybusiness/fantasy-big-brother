@@ -8,6 +8,7 @@ const LINKS = [
   { href: '/', label: 'Dashboard' },
   { href: '/leaderboard', label: 'Leaderboard' },
   { href: '/houseguests', label: 'Houseguests' },
+  { href: '/draft', label: 'Draft' },
   { href: '/trends', label: 'Trends' },
   { href: '/compare', label: 'Compare' },
   { href: '/forecast', label: 'Forecast' },
@@ -41,7 +42,7 @@ export default function Nav() {
             <Link
               key={link.href}
               href={link.href}
-              className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                 isActive(pathname, link.href)
                   ? 'bg-raised text-ink'
                   : 'text-ink-mid hover:text-ink'
