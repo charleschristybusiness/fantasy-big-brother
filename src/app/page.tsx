@@ -1,6 +1,14 @@
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { Season, Houseguest, Bracket, WeeklyEvent, BlockSurvivor, WeeklyRanking } from '@/lib/types';
+import {
+  Season,
+  Houseguest,
+  Bracket,
+  WeeklyEvent,
+  BlockSurvivor,
+  WeeklyRanking,
+  PLACEMENT_POINTS_BY_PLACE,
+} from '@/lib/types';
 import { calculateBracketScore, getHouseguestStats } from '@/lib/scoring';
 import {
   Card,
@@ -526,18 +534,16 @@ export default async function HomePage() {
               Placement points
             </h3>
             <p className="mb-3 text-sm text-ink-mid">
-              Awarded for final finish, from 40 points for the winner down to 0 for first out.
+              Awarded for final finish, from 40 points for the winner down to 0 for last.
             </p>
             <div className="grid grid-cols-4 gap-1.5 text-center text-xs">
               {[
-                ['1st', '40'],
-                ['2nd', '35'],
-                ['3rd', '30'],
-                ['4th', '27'],
-                ['5th', '25'],
-                ['8th', '17'],
-                ['12th', '8'],
-                ['Last', '0'],
+                ...Object.entries(PLACEMENT_POINTS_BY_PLACE).map(([place, pts]) => {
+                  const n = Number(place);
+                  const suffix = n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th';
+                  return [`${n}${suffix}`, String(pts)] as const;
+                }),
+                ['16th+', '0'] as const,
               ].map(([place, pts], i) => (
                 <div
                   key={place}
