@@ -13,6 +13,7 @@ import {
   Skeleton,
   RankNumber,
   RankChange,
+  IconEye,
   inputCls,
   thCls,
   trCls,
@@ -67,9 +68,15 @@ const PODIUM_STYLES = [
   },
 ];
 
+interface DisplayBracket {
+  id: string;
+  team_name: string;
+  total_score: number;
+}
+
 export default function LeaderboardPage() {
   const [season, setSeason] = useState<Season | null>(null);
-  const [brackets, setBrackets] = useState<ReturnType<typeof calculateBracketScore>[]>([]);
+  const [brackets, setBrackets] = useState<DisplayBracket[]>([]);
   const [rankChanges, setRankChanges] = useState<Map<string, number | null>>(new Map());
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -91,29 +98,46 @@ export default function LeaderboardPage() {
       const s = seasonData as Season;
       setSeason(s);
 
-      const [
-        { data: hgData },
-        { data: bracketData },
-        { data: eventsData },
-        { data: survivorsData },
-        { data: rankingsData },
-      ] = await Promise.all([
-        supabase.from('houseguests').select('*').eq('season_id', s.id),
-        supabase.from('brackets').select('*').eq('season_id', s.id),
-        supabase.from('weekly_events').select('*').eq('season_id', s.id),
-        supabase.from('block_survivors').select('*, weekly_events!inner(season_id)').eq('weekly_events.season_id', s.id),
-        supabase.from('weekly_rankings').select('*').eq('season_id', s.id).order('week_number', { ascending: true }),
-      ]);
+      let scored: DisplayBracket[];
+      let allRankings: WeeklyRanking[];
 
-      const houseguests = (hgData || []) as Houseguest[];
-      const rawBrackets = (bracketData || []) as Bracket[];
-      const events = (eventsData || []) as WeeklyEvent[];
-      const survivors = (survivorsData || []) as BlockSurvivor[];
-      const allRankings = (rankingsData || []) as WeeklyRanking[];
+      if (s.brackets_hidden) {
+        // Blind-bracket mode: only names and stored totals ever reach the browser
+        const [{ data: bracketData }, { data: rankingsData }] = await Promise.all([
+          supabase
+            .from('brackets')
+            .select('id, team_name, total_score')
+            .eq('season_id', s.id)
+            .order('total_score', { ascending: false }),
+          supabase.from('weekly_rankings').select('*').eq('season_id', s.id).order('week_number', { ascending: true }),
+        ]);
+        scored = (bracketData || []) as DisplayBracket[];
+        allRankings = (rankingsData || []) as WeeklyRanking[];
+      } else {
+        const [
+          { data: hgData },
+          { data: bracketData },
+          { data: eventsData },
+          { data: survivorsData },
+          { data: rankingsData },
+        ] = await Promise.all([
+          supabase.from('houseguests').select('*').eq('season_id', s.id),
+          supabase.from('brackets').select('*').eq('season_id', s.id),
+          supabase.from('weekly_events').select('*').eq('season_id', s.id),
+          supabase.from('block_survivors').select('*, weekly_events!inner(season_id)').eq('weekly_events.season_id', s.id),
+          supabase.from('weekly_rankings').select('*').eq('season_id', s.id).order('week_number', { ascending: true }),
+        ]);
 
-      const scored = rawBrackets
-        .map((b) => calculateBracketScore(b, houseguests, events, survivors, s.houseguest_count))
-        .sort((a, b) => b.total_score - a.total_score);
+        const houseguests = (hgData || []) as Houseguest[];
+        const rawBrackets = (bracketData || []) as Bracket[];
+        const events = (eventsData || []) as WeeklyEvent[];
+        const survivors = (survivorsData || []) as BlockSurvivor[];
+        allRankings = (rankingsData || []) as WeeklyRanking[];
+
+        scored = rawBrackets
+          .map((b) => calculateBracketScore(b, houseguests, events, survivors, s.houseguest_count))
+          .sort((a, b) => b.total_score - a.total_score);
+      }
 
       const changes = new Map<string, number | null>();
       if (allRankings.length > 0) {
@@ -165,6 +189,16 @@ export default function LeaderboardPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-12">
       <PageHeader eyebrow="Standings" title="Leaderboard" subtitle={season.name} />
+
+      {season.brackets_hidden && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-gold/20 bg-gold/[0.06] px-4 py-3 text-sm text-ink-mid">
+          <IconEye className="shrink-0 text-gold" />
+          <span>
+            Picks are hidden until the admin reveals brackets. You can still view your own picks
+            from your team page with your bracket password.
+          </span>
+        </div>
+      )}
 
       <div className="mb-8">
         <input

@@ -41,6 +41,18 @@ export default async function DraftBoardPage() {
     return <NoSeason />;
   }
 
+  if (season.brackets_hidden) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-12">
+        <PageHeader eyebrow="Analytics" title="Draft board" subtitle={season.name} />
+        <EmptyState
+          title="Brackets are hidden"
+          hint="Ownership stats unlock once the admin reveals everyone's picks."
+        />
+      </div>
+    );
+  }
+
   const [
     { data: hgData },
     { data: bracketData },

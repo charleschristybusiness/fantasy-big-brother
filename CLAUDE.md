@@ -164,6 +164,11 @@ Follow the dataviz method: form first, color by job, validated palette, thin mar
 - **Never** cycle or reassign chart series colors when filters change
 
 ## Data Conventions
+- **Blind brackets**: when `seasons.brackets_hidden` is true, pick data must never be fetched
+  to the browser — leaderboard/team pages select only `id, team_name, total_score` (stored
+  totals are kept current by recalculation) and Compare/Forecast/Draft show an EmptyState.
+  A player views their own picks via `/api/brackets/reveal` (bracket password or admin master
+  key). Admin toggles this with the Hide/Reveal brackets button in Season settings.
 - **Bracket passwords**: `brackets.edit_password` stores a SHA-256 hex hash of the password set
   at submission. Players edit their bracket from the team page (`/api/brackets/update`) until
   `seasons.submissions_locked` is true ("roster lock"). The season `admin_password` works as a

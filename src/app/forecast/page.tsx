@@ -68,6 +68,11 @@ export default function ForecastPage() {
       const s = seasonData as Season;
       setSeason(s);
 
+      if (s.brackets_hidden) {
+        setLoading(false);
+        return;
+      }
+
       const [
         { data: hgData },
         { data: bracketData },
@@ -245,6 +250,18 @@ export default function ForecastPage() {
 
   if (!season) {
     return <NoSeason />;
+  }
+
+  if (season.brackets_hidden) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-12">
+        <PageHeader eyebrow="What if" title="Forecast" subtitle={season.name} />
+        <EmptyState
+          title="Brackets are hidden"
+          hint="The What-If simulator unlocks once the admin reveals everyone's picks."
+        />
+      </div>
+    );
   }
 
   const hasHypotheticalInput = hypotheticalWeeks.some(

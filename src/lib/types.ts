@@ -3,6 +3,7 @@ export interface Season {
   name: string;
   houseguest_count: number;
   submissions_locked: boolean;
+  brackets_hidden: boolean;
   status: 'active' | 'completed';
   admin_password: string;
   created_at: string;

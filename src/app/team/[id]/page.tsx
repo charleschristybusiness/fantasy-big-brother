@@ -12,6 +12,7 @@ import {
   Avatar,
   StatusBadge,
   RankNumber,
+  IconEye,
   inputCls,
   selectCls,
   btnPrimary,
@@ -51,15 +52,28 @@ function TeamDetailSkeleton() {
   );
 }
 
+interface BracketSummary {
+  season_id: string;
+  team_name: string;
+  total_score: number;
+}
+
 export default function TeamDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [bracket, setBracket] = useState<BracketWithPicks | null>(null);
+  const [summary, setSummary] = useState<BracketSummary | null>(null);
   const [season, setSeason] = useState<Season | null>(null);
-  const [activeHouseguests, setActiveHouseguests] = useState<Houseguest[]>([]);
+  const [houseguests, setHouseguests] = useState<Houseguest[]>([]);
   const [rank, setRank] = useState<number | null>(null);
   const [teamCount, setTeamCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+
+  // Reveal state (used while the admin has brackets hidden)
+  const [revealPassword, setRevealPassword] = useState('');
+  const [revealing, setRevealing] = useState(false);
+  const [revealError, setRevealError] = useState('');
+  const [verifiedPassword, setVerifiedPassword] = useState('');
 
   // Edit state
   const [editing, setEditing] = useState(false);
@@ -69,71 +83,161 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
 
+  const activeHouseguests = houseguests
+    .filter((h) => h.status === 'active')
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   const load = useCallback(async () => {
-    const { data: bracketData } = await supabase
+    // Minimal columns first — while brackets are hidden, picks must never
+    // reach the browser without a password
+    const { data: minimalData } = await supabase
       .from('brackets')
-      .select('*')
+      .select('id, season_id, team_name, total_score')
       .eq('id', id)
       .single();
 
-    if (!bracketData) {
+    if (!minimalData) {
       setNotFound(true);
       setLoading(false);
       return;
     }
-
-    const b = bracketData as Bracket;
+    const minimal = minimalData as { id: string } & BracketSummary;
+    setSummary({
+      season_id: minimal.season_id,
+      team_name: minimal.team_name,
+      total_score: Number(minimal.total_score),
+    });
 
     const { data: seasonData } = await supabase
       .from('seasons')
       .select('*')
-      .eq('id', b.season_id)
+      .eq('id', minimal.season_id)
       .single();
 
     const s = seasonData as Season;
     setSeason(s);
 
+    const { data: hgData } = await supabase
+      .from('houseguests')
+      .select('*')
+      .eq('season_id', minimal.season_id);
+    const hgs = (hgData || []) as Houseguest[];
+    setHouseguests(hgs);
+
+    if (s.brackets_hidden) {
+      // Rank from stored totals only
+      const { data: allMin } = await supabase
+        .from('brackets')
+        .select('id')
+        .eq('season_id', minimal.season_id)
+        .order('total_score', { ascending: false });
+      const ids = ((allMin || []) as { id: string }[]).map((r) => r.id);
+      const pos = ids.indexOf(minimal.id);
+      setRank(pos >= 0 ? pos + 1 : null);
+      setTeamCount(ids.length);
+      setBracket(null);
+      setLoading(false);
+      return;
+    }
+
     const [
-      { data: hgData },
+      { data: bracketData },
       { data: allBracketsData },
       { data: eventsData },
       { data: survivorsData },
     ] = await Promise.all([
-      supabase.from('houseguests').select('*').eq('season_id', b.season_id),
-      supabase.from('brackets').select('*').eq('season_id', b.season_id),
-      supabase.from('weekly_events').select('*').eq('season_id', b.season_id),
-      supabase.from('block_survivors').select('*, weekly_events!inner(season_id)').eq('weekly_events.season_id', b.season_id),
+      supabase.from('brackets').select('*').eq('id', id).single(),
+      supabase.from('brackets').select('*').eq('season_id', minimal.season_id),
+      supabase.from('weekly_events').select('*').eq('season_id', minimal.season_id),
+      supabase.from('block_survivors').select('*, weekly_events!inner(season_id)').eq('weekly_events.season_id', minimal.season_id),
     ]);
 
-    const houseguests = (hgData || []) as Houseguest[];
+    const b = bracketData as Bracket;
     const allBrackets = (allBracketsData || []) as Bracket[];
     const events = (eventsData || []) as WeeklyEvent[];
     const survivors = (survivorsData || []) as BlockSurvivor[];
 
-    setActiveHouseguests(
-      houseguests.filter((h) => h.status === 'active').sort((a, b2) => a.name.localeCompare(b2.name))
-    );
-
     const allScored = allBrackets
-      .map((br) => calculateBracketScore(br, houseguests, events, survivors, s.houseguest_count))
+      .map((br) => calculateBracketScore(br, hgs, events, survivors, s.houseguest_count))
       .sort((a, b2) => b2.total_score - a.total_score);
 
     const position = allScored.findIndex((br) => br.id === b.id);
     setRank(position >= 0 ? position + 1 : null);
     setTeamCount(allScored.length);
-    setBracket(allScored[position] ?? calculateBracketScore(b, houseguests, events, survivors, s.houseguest_count));
+    setBracket(allScored[position] ?? calculateBracketScore(b, hgs, events, survivors, s.houseguest_count));
     setLoading(false);
   }, [id]);
 
   useEffect(() => {
-    load();
+    async function init() {
+      await load();
+    }
+    init();
   }, [load]);
+
+  const revealBracket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRevealError('');
+    if (!revealPassword) {
+      setRevealError('Enter your bracket password.');
+      return;
+    }
+    if (!season || !summary) return;
+
+    setRevealing(true);
+    try {
+      const response = await fetch('/api/brackets/reveal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bracket_id: id, password: revealPassword }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setRevealError(result.error || 'Failed to reveal bracket.');
+        setRevealing(false);
+        return;
+      }
+
+      const [{ data: eventsData }, { data: survivorsData }] = await Promise.all([
+        supabase.from('weekly_events').select('*').eq('season_id', summary.season_id),
+        supabase.from('block_survivors').select('*, weekly_events!inner(season_id)').eq('weekly_events.season_id', summary.season_id),
+      ]);
+
+      const raw: Bracket = {
+        id,
+        season_id: summary.season_id,
+        team_name: summary.team_name,
+        pick_1_houseguest_id: result.picks[0],
+        pick_2_houseguest_id: result.picks[1],
+        pick_3_houseguest_id: result.picks[2],
+        pick_4_houseguest_id: result.picks[3],
+        pick_5_houseguest_id: result.picks[4],
+        total_score: summary.total_score,
+        created_at: '',
+      };
+      setBracket(
+        calculateBracketScore(
+          raw,
+          houseguests,
+          (eventsData || []) as WeeklyEvent[],
+          (survivorsData || []) as BlockSurvivor[],
+          season.houseguest_count
+        )
+      );
+      setVerifiedPassword(revealPassword);
+      setRevealPassword('');
+      setRevealing(false);
+    } catch {
+      setRevealError('Something went wrong. Please try again.');
+      setRevealing(false);
+    }
+  };
 
   const startEditing = () => {
     if (!bracket) return;
     setEditTeamName(bracket.team_name);
     setEditPicks(bracket.picks.map((p) => p.houseguest.id));
-    setEditPassword('');
+    setEditPassword(verifiedPassword);
     setEditError('');
     setEditing(true);
   };
@@ -186,8 +290,40 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
       }
       setEditing(false);
       setSavingEdit(false);
-      setLoading(true);
-      await load();
+
+      if (season?.brackets_hidden) {
+        // Stay revealed after saving: recompute locally with the new picks
+        const [{ data: eventsData }, { data: survivorsData }, { data: freshMin }] = await Promise.all([
+          supabase.from('weekly_events').select('*').eq('season_id', season.id),
+          supabase.from('block_survivors').select('*, weekly_events!inner(season_id)').eq('weekly_events.season_id', season.id),
+          supabase.from('brackets').select('total_score').eq('id', id).single(),
+        ]);
+        const raw: Bracket = {
+          id,
+          season_id: season.id,
+          team_name: editTeamName.trim(),
+          pick_1_houseguest_id: editPicks[0] as string,
+          pick_2_houseguest_id: editPicks[1] as string,
+          pick_3_houseguest_id: editPicks[2] as string,
+          pick_4_houseguest_id: editPicks[3] as string,
+          pick_5_houseguest_id: editPicks[4] as string,
+          total_score: Number(freshMin?.total_score ?? 0),
+          created_at: '',
+        };
+        setSummary({ season_id: season.id, team_name: raw.team_name, total_score: raw.total_score });
+        setBracket(
+          calculateBracketScore(
+            raw,
+            houseguests,
+            (eventsData || []) as WeeklyEvent[],
+            (survivorsData || []) as BlockSurvivor[],
+            season.houseguest_count
+          )
+        );
+      } else {
+        setLoading(true);
+        await load();
+      }
     } catch {
       setEditError('Something went wrong. Please try again.');
       setSavingEdit(false);
@@ -198,7 +334,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
     return <TeamDetailSkeleton />;
   }
 
-  if (notFound || !bracket) {
+  if (notFound || !summary) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-16 text-center">
         <h1 className="mb-3 text-3xl font-bold tracking-tight text-ink">Team not found</h1>
@@ -209,8 +345,10 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
     );
   }
 
-  const maxPickScore = Math.max(...bracket.picks.map((p) => p.pick_score), 1);
-  const canEdit = Boolean(season && !season.submissions_locked);
+  const teamName = bracket?.team_name ?? summary.team_name;
+  const totalScore = bracket?.total_score ?? summary.total_score;
+  const canEdit = Boolean(season && !season.submissions_locked && bracket);
+  const maxPickScore = bracket ? Math.max(...bracket.picks.map((p) => p.pick_score), 1) : 1;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
@@ -226,7 +364,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-[0.15em] text-gold">Team</p>
-            <h1 className="text-3xl font-bold tracking-tight text-ink">{bracket.team_name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-ink">{teamName}</h1>
             {rank !== null && (
               <p className="mt-1.5 text-sm text-ink-mid">
                 Ranked <RankNumber rank={rank} /> of {teamCount} team{teamCount !== 1 ? 's' : ''}
@@ -235,7 +373,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
           </div>
           <div className="text-right">
             <p className="text-4xl font-semibold text-gold tabular-nums">
-              {bracket.total_score.toFixed(2)}
+              {totalScore.toFixed(2)}
             </p>
             <p className="mt-0.5 text-sm text-ink-dim">total points</p>
           </div>
@@ -251,6 +389,41 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
           </div>
         )}
       </Card>
+
+      {/* Hidden-brackets reveal */}
+      {season?.brackets_hidden && !bracket && (
+        <Card className="mb-6 border-gold/20 p-6">
+          <div className="mb-1 flex items-center gap-2.5">
+            <IconEye className="text-gold" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-mid">
+              Picks hidden
+            </h2>
+          </div>
+          <p className="mb-5 text-xs text-ink-dim">
+            The admin is keeping all brackets secret for now. Enter your bracket password to view
+            {season.submissions_locked ? '' : ' and edit'} your own picks — nobody else can see them.
+          </p>
+          <form onSubmit={revealBracket} className="flex flex-wrap gap-3">
+            <input
+              type="password"
+              value={revealPassword}
+              onChange={(e) => setRevealPassword(e.target.value)}
+              className={`${inputCls} max-w-xs flex-1 basis-52`}
+              placeholder="Your bracket password"
+              autoComplete="current-password"
+              aria-label="Bracket password"
+            />
+            <button type="submit" disabled={revealing} className={btnPrimary}>
+              {revealing ? 'Checking…' : 'Reveal my picks'}
+            </button>
+          </form>
+          {revealError && (
+            <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-sm text-red-400" role="alert">
+              {revealError}
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Edit panel */}
       {canEdit && editing && (
@@ -351,71 +524,73 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
       )}
 
       {/* Picks */}
-      <div className="space-y-4">
-        {bracket.picks.map((pick) => {
-          const share = Math.max(0, (pick.pick_score / maxPickScore) * 100);
-          return (
-            <Card
-              key={pick.position}
-              className={`p-6 transition-colors hover:border-edge-bright ${
-                pick.position === 1 ? 'border-gold/20' : ''
-              }`}
-            >
-              <div className="mb-4 flex items-center justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-4">
-                  <Avatar name={pick.houseguest.name} photoUrl={pick.houseguest.photo_url} />
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2.5">
-                      <h3 className="truncate text-lg font-semibold text-ink">
-                        {pick.houseguest.name}
-                      </h3>
-                      <StatusBadge status={pick.houseguest.status} />
+      {bracket && (
+        <div className="space-y-4">
+          {bracket.picks.map((pick) => {
+            const share = Math.max(0, (pick.pick_score / maxPickScore) * 100);
+            return (
+              <Card
+                key={pick.position}
+                className={`p-6 transition-colors hover:border-edge-bright ${
+                  pick.position === 1 ? 'border-gold/20' : ''
+                }`}
+              >
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <div className="flex min-w-0 items-center gap-4">
+                    <Avatar name={pick.houseguest.name} photoUrl={pick.houseguest.photo_url} />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2.5">
+                        <h3 className="truncate text-lg font-semibold text-ink">
+                          {pick.houseguest.name}
+                        </h3>
+                        <StatusBadge status={pick.houseguest.status} />
+                      </div>
+                      <p className="mt-0.5 text-sm text-ink-mid">
+                        Pick {pick.position} &middot;{' '}
+                        <span className="font-medium text-ink tabular-nums">{pick.multiplier}&times;</span>{' '}
+                        multiplier
+                      </p>
                     </div>
-                    <p className="mt-0.5 text-sm text-ink-mid">
-                      Pick {pick.position} &middot;{' '}
-                      <span className="font-medium text-ink tabular-nums">{pick.multiplier}&times;</span>{' '}
-                      multiplier
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-xl font-semibold text-gold tabular-nums">
+                      {pick.pick_score.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-ink-dim tabular-nums">
+                      {pick.stats.base_score} &times; {pick.multiplier}
                     </p>
                   </div>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-xl font-semibold text-gold tabular-nums">
-                    {pick.pick_score.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-ink-dim tabular-nums">
-                    {pick.stats.base_score} &times; {pick.multiplier}
-                  </p>
+
+                {/* Contribution meter */}
+                <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-raised" aria-hidden>
+                  <div
+                    className="h-full rounded-full bg-gold transition-all duration-500"
+                    style={{ width: `${share}%` }}
+                  />
                 </div>
-              </div>
 
-              {/* Contribution meter */}
-              <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-raised" aria-hidden>
-                <div
-                  className="h-full rounded-full bg-gold transition-all duration-500"
-                  style={{ width: `${share}%` }}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {[
-                  { label: 'HOH wins', value: pick.stats.hoh_wins, pts: pick.stats.hoh_wins * 7 },
-                  { label: 'Veto wins', value: pick.stats.veto_wins, pts: pick.stats.veto_wins * 5 },
-                  { label: 'Block survived', value: pick.stats.block_survivals, pts: pick.stats.block_survivals * 2 },
-                  { label: 'Placement', value: pick.stats.placement_points, pts: null },
-                ].map((stat) => (
-                  <div key={stat.label} className="rounded-xl border border-edge bg-raised p-3">
-                    <p className="text-xs uppercase tracking-wider text-ink-dim">{stat.label}</p>
-                    <p className="mt-1 text-lg font-semibold text-ink tabular-nums">{stat.value}</p>
-                    {stat.pts !== null && (
-                      <p className="text-xs text-ink-dim tabular-nums">{stat.pts} pts</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {[
+                    { label: 'HOH wins', value: pick.stats.hoh_wins, pts: pick.stats.hoh_wins * 7 },
+                    { label: 'Veto wins', value: pick.stats.veto_wins, pts: pick.stats.veto_wins * 5 },
+                    { label: 'Block survived', value: pick.stats.block_survivals, pts: pick.stats.block_survivals * 2 },
+                    { label: 'Placement', value: pick.stats.placement_points, pts: null },
+                  ].map((stat) => (
+                    <div key={stat.label} className="rounded-xl border border-edge bg-raised p-3">
+                      <p className="text-xs uppercase tracking-wider text-ink-dim">{stat.label}</p>
+                      <p className="mt-1 text-lg font-semibold text-ink tabular-nums">{stat.value}</p>
+                      {stat.pts !== null && (
+                        <p className="text-xs text-ink-dim tabular-nums">{stat.pts} pts</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

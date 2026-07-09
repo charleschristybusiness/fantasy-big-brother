@@ -171,6 +171,19 @@ export default function AdminPage() {
     setSeason({ ...season, submissions_locked: newLocked });
   };
 
+  const toggleBracketsHidden = async () => {
+    if (!season) return;
+    const newHidden = !season.brackets_hidden;
+    const { error } = await supabase
+      .from('seasons')
+      .update({ brackets_hidden: newHidden })
+      .eq('id', season.id);
+
+    if (!error) {
+      setSeason({ ...season, brackets_hidden: newHidden });
+    }
+  };
+
   const addHouseguest = async () => {
     if (!season || !newHouseguestName.trim()) return;
     const { data } = await supabase
@@ -542,10 +555,20 @@ export default function AdminPage() {
               >
                 {season.submissions_locked ? 'Unlock rosters' : 'Lock rosters'}
               </button>
+              <button
+                onClick={toggleBracketsHidden}
+                className={season.brackets_hidden ? btnPrimary : btnSecondary}
+              >
+                {season.brackets_hidden ? 'Reveal brackets' : 'Hide brackets'}
+              </button>
               <button onClick={recalculateAllScores} className={btnSecondary}>
                 Recalculate all scores
               </button>
             </div>
+            <p className="mt-3 text-xs text-ink-dim">
+              While brackets are hidden, everyone can see team names and scores but nobody can see
+              picks — except a player entering their own bracket password on their team page.
+            </p>
           </Card>
 
           <Card className="p-6">

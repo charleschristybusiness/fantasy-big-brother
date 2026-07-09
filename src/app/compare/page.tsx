@@ -52,6 +52,11 @@ function CompareContent() {
       const s = seasonData as Season;
       setSeason(s);
 
+      if (s.brackets_hidden) {
+        setLoading(false);
+        return;
+      }
+
       const [
         { data: hgData },
         { data: bracketData },
@@ -128,6 +133,22 @@ function CompareContent() {
 
   if (!season) {
     return <NoSeason />;
+  }
+
+  if (season.brackets_hidden) {
+    return (
+      <div className="mx-auto max-w-5xl px-4 py-12">
+        <PageHeader
+          eyebrow="Head-to-head"
+          title="Compare teams"
+          subtitle={season.name}
+        />
+        <EmptyState
+          title="Brackets are hidden"
+          hint="Head-to-head comparisons unlock once the admin reveals everyone's picks."
+        />
+      </div>
+    );
   }
 
   return (
