@@ -249,7 +249,7 @@ export default async function HomePage() {
             </Link>
           ) : (
             <span className="inline-flex items-center justify-center rounded-xl border border-edge px-6 py-3 text-sm font-medium text-ink-dim">
-              Submissions locked
+              Rosters locked
             </span>
           )}
         </div>

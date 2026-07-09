@@ -540,7 +540,7 @@ export default function AdminPage() {
                 onClick={toggleSubmissions}
                 className={season.submissions_locked ? btnSecondary : btnDanger}
               >
-                {season.submissions_locked ? 'Unlock submissions' : 'Lock submissions'}
+                {season.submissions_locked ? 'Unlock rosters' : 'Lock rosters'}
               </button>
               <button onClick={recalculateAllScores} className={btnSecondary}>
                 Recalculate all scores

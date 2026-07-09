@@ -1,12 +1,24 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Houseguest, Bracket, WeeklyEvent, BlockSurvivor, Season } from '@/lib/types';
 import { calculateBracketScore } from '@/lib/scoring';
 import type { BracketWithPicks } from '@/lib/types';
-import { Card, Skeleton, Avatar, StatusBadge, RankNumber } from '@/components/ui';
+import {
+  Card,
+  Skeleton,
+  Avatar,
+  StatusBadge,
+  RankNumber,
+  inputCls,
+  selectCls,
+  btnPrimary,
+  btnSecondary,
+} from '@/components/ui';
+
+const MULTIPLIERS = ['1.5×', '1.25×', '1.0×', '0.75×', '0.5×'];
 
 function TeamDetailSkeleton() {
   return (
@@ -42,64 +54,145 @@ function TeamDetailSkeleton() {
 export default function TeamDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [bracket, setBracket] = useState<BracketWithPicks | null>(null);
+  const [season, setSeason] = useState<Season | null>(null);
+  const [activeHouseguests, setActiveHouseguests] = useState<Houseguest[]>([]);
   const [rank, setRank] = useState<number | null>(null);
   const [teamCount, setTeamCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      const { data: bracketData } = await supabase
-        .from('brackets')
-        .select('*')
-        .eq('id', id)
-        .single();
+  // Edit state
+  const [editing, setEditing] = useState(false);
+  const [editPassword, setEditPassword] = useState('');
+  const [editTeamName, setEditTeamName] = useState('');
+  const [editPicks, setEditPicks] = useState<(string | '')[]>(['', '', '', '', '']);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState('');
 
-      if (!bracketData) {
-        setNotFound(true);
-        setLoading(false);
+  const load = useCallback(async () => {
+    const { data: bracketData } = await supabase
+      .from('brackets')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (!bracketData) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+
+    const b = bracketData as Bracket;
+
+    const { data: seasonData } = await supabase
+      .from('seasons')
+      .select('*')
+      .eq('id', b.season_id)
+      .single();
+
+    const s = seasonData as Season;
+    setSeason(s);
+
+    const [
+      { data: hgData },
+      { data: allBracketsData },
+      { data: eventsData },
+      { data: survivorsData },
+    ] = await Promise.all([
+      supabase.from('houseguests').select('*').eq('season_id', b.season_id),
+      supabase.from('brackets').select('*').eq('season_id', b.season_id),
+      supabase.from('weekly_events').select('*').eq('season_id', b.season_id),
+      supabase.from('block_survivors').select('*, weekly_events!inner(season_id)').eq('weekly_events.season_id', b.season_id),
+    ]);
+
+    const houseguests = (hgData || []) as Houseguest[];
+    const allBrackets = (allBracketsData || []) as Bracket[];
+    const events = (eventsData || []) as WeeklyEvent[];
+    const survivors = (survivorsData || []) as BlockSurvivor[];
+
+    setActiveHouseguests(
+      houseguests.filter((h) => h.status === 'active').sort((a, b2) => a.name.localeCompare(b2.name))
+    );
+
+    const allScored = allBrackets
+      .map((br) => calculateBracketScore(br, houseguests, events, survivors, s.houseguest_count))
+      .sort((a, b2) => b2.total_score - a.total_score);
+
+    const position = allScored.findIndex((br) => br.id === b.id);
+    setRank(position >= 0 ? position + 1 : null);
+    setTeamCount(allScored.length);
+    setBracket(allScored[position] ?? calculateBracketScore(b, houseguests, events, survivors, s.houseguest_count));
+    setLoading(false);
+  }, [id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const startEditing = () => {
+    if (!bracket) return;
+    setEditTeamName(bracket.team_name);
+    setEditPicks(bracket.picks.map((p) => p.houseguest.id));
+    setEditPassword('');
+    setEditError('');
+    setEditing(true);
+  };
+
+  const handleEditPickChange = (index: number, value: string) => {
+    const next = [...editPicks];
+    next[index] = value;
+    setEditPicks(next);
+  };
+
+  const getAvailableHouseguests = (currentIndex: number) => {
+    const selectedIds = editPicks.filter((p, i) => p && i !== currentIndex);
+    return activeHouseguests.filter((hg) => !selectedIds.includes(hg.id));
+  };
+
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditError('');
+
+    if (!editTeamName.trim()) {
+      setEditError('Please enter a team name.');
+      return;
+    }
+    if (!editPassword) {
+      setEditError('Enter your bracket password.');
+      return;
+    }
+    if (editPicks.some((p) => !p)) {
+      setEditError('Please select all 5 picks.');
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const response = await fetch('/api/brackets/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bracket_id: id,
+          password: editPassword,
+          team_name: editTeamName.trim(),
+          picks: editPicks,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setEditError(result.error || 'Failed to update bracket.');
+        setSavingEdit(false);
         return;
       }
-
-      const b = bracketData as Bracket;
-
-      const { data: seasonData } = await supabase
-        .from('seasons')
-        .select('*')
-        .eq('id', b.season_id)
-        .single();
-
-      const season = seasonData as Season;
-
-      const [
-        { data: hgData },
-        { data: allBracketsData },
-        { data: eventsData },
-        { data: survivorsData },
-      ] = await Promise.all([
-        supabase.from('houseguests').select('*').eq('season_id', b.season_id),
-        supabase.from('brackets').select('*').eq('season_id', b.season_id),
-        supabase.from('weekly_events').select('*').eq('season_id', b.season_id),
-        supabase.from('block_survivors').select('*, weekly_events!inner(season_id)').eq('weekly_events.season_id', b.season_id),
-      ]);
-
-      const houseguests = (hgData || []) as Houseguest[];
-      const allBrackets = (allBracketsData || []) as Bracket[];
-      const events = (eventsData || []) as WeeklyEvent[];
-      const survivors = (survivorsData || []) as BlockSurvivor[];
-
-      const allScored = allBrackets
-        .map((br) => calculateBracketScore(br, houseguests, events, survivors, season.houseguest_count))
-        .sort((a, b2) => b2.total_score - a.total_score);
-
-      const position = allScored.findIndex((br) => br.id === b.id);
-      setRank(position >= 0 ? position + 1 : null);
-      setTeamCount(allScored.length);
-      setBracket(allScored[position] ?? calculateBracketScore(b, houseguests, events, survivors, season.houseguest_count));
-      setLoading(false);
+      setEditing(false);
+      setSavingEdit(false);
+      setLoading(true);
+      await load();
+    } catch {
+      setEditError('Something went wrong. Please try again.');
+      setSavingEdit(false);
     }
-    load();
-  }, [id]);
+  };
 
   if (loading) {
     return <TeamDetailSkeleton />;
@@ -117,6 +210,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   const maxPickScore = Math.max(...bracket.picks.map((p) => p.pick_score), 1);
+  const canEdit = Boolean(season && !season.submissions_locked);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
@@ -146,7 +240,115 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
             <p className="mt-0.5 text-sm text-ink-dim">total points</p>
           </div>
         </div>
+        {canEdit && !editing && (
+          <div className="mt-5 flex items-center justify-between gap-3 border-t border-edge pt-4">
+            <p className="text-xs text-ink-dim">
+              Rosters are open — you can change your picks with your bracket password.
+            </p>
+            <button onClick={startEditing} className={btnSecondary}>
+              Edit bracket
+            </button>
+          </div>
+        )}
       </Card>
+
+      {/* Edit panel */}
+      {canEdit && editing && (
+        <Card className="mb-6 border-gold/20 p-6">
+          <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-ink-mid">
+            Edit bracket
+          </h2>
+          <p className="mb-5 text-xs text-ink-dim">
+            Changes save immediately and your score is recalculated. Editable until the admin locks
+            rosters.
+          </p>
+          <form onSubmit={saveEdit} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="edit-team-name"
+                  className="mb-2 block text-xs font-medium uppercase tracking-wider text-ink-dim"
+                >
+                  Team name
+                </label>
+                <input
+                  id="edit-team-name"
+                  type="text"
+                  value={editTeamName}
+                  onChange={(e) => setEditTeamName(e.target.value)}
+                  className={inputCls}
+                  maxLength={50}
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="edit-password"
+                  className="mb-2 block text-xs font-medium uppercase tracking-wider text-ink-dim"
+                >
+                  Bracket password
+                </label>
+                <input
+                  id="edit-password"
+                  type="password"
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                  className={inputCls}
+                  placeholder="The password you set at submission"
+                  autoComplete="current-password"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {[0, 1, 2, 3, 4].map((index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold tabular-nums ${
+                      index === 0 ? 'bg-gold text-black' : 'border border-edge bg-raised text-ink-mid'
+                    }`}
+                    aria-hidden
+                  >
+                    {index + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <select
+                      value={editPicks[index]}
+                      onChange={(e) => handleEditPickChange(index, e.target.value)}
+                      className={selectCls}
+                      aria-label={`Pick ${index + 1} (${MULTIPLIERS[index]} multiplier)`}
+                    >
+                      <option value="">Select a houseguest…</option>
+                      {getAvailableHouseguests(index).map((hg) => (
+                        <option key={hg.id} value={hg.id}>
+                          {hg.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <span className="w-12 shrink-0 text-right text-xs text-ink-dim tabular-nums">
+                    {MULTIPLIERS[index]}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {editError && (
+              <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-sm text-red-400" role="alert">
+                {editError}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3">
+              <button type="submit" disabled={savingEdit} className={btnPrimary}>
+                {savingEdit ? 'Saving…' : 'Save changes'}
+              </button>
+              <button type="button" onClick={() => setEditing(false)} className={btnSecondary}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Card>
+      )}
 
       {/* Picks */}
       <div className="space-y-4">

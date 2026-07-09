@@ -38,6 +38,7 @@ export default function SubmitBracketPage() {
   const [season, setSeason] = useState<Season | null>(null);
   const [houseguests, setHouseguests] = useState<Houseguest[]>([]);
   const [teamName, setTeamName] = useState('');
+  const [password, setPassword] = useState('');
   const [picks, setPicks] = useState<(string | '')[]>(['', '', '', '', '']);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -65,7 +66,8 @@ export default function SubmitBracketPage() {
         .eq('season_id', seasonData.id)
         .order('name');
 
-      setHouseguests((hgData as Houseguest[]) || []);
+      // only houseguests still in the house are draftable
+      setHouseguests(((hgData as Houseguest[]) || []).filter((h) => h.status === 'active'));
       setLoading(false);
     }
     load();
@@ -90,6 +92,10 @@ export default function SubmitBracketPage() {
       setError('Please enter a team name.');
       return;
     }
+    if (password.length < 4) {
+      setError('Please set a bracket password of at least 4 characters.');
+      return;
+    }
     if (picks.some((p) => !p)) {
       setError('Please select all 5 picks.');
       return;
@@ -105,6 +111,7 @@ export default function SubmitBracketPage() {
           season_id: season!.id,
           team_name: teamName.trim(),
           picks,
+          password,
         }),
       });
 
@@ -134,10 +141,10 @@ export default function SubmitBracketPage() {
   if (season.submissions_locked) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-12">
-        <PageHeader eyebrow="Draft" title="Submissions locked" subtitle={season.name} />
+        <PageHeader eyebrow="Draft" title="Rosters locked" subtitle={season.name} />
         <EmptyState
           title="The season has already begun"
-          hint="Bracket submissions are locked — follow your league on the leaderboard."
+          hint="Rosters are locked — no new brackets or edits. Follow your league on the leaderboard."
         />
       </div>
     );
@@ -168,6 +175,29 @@ export default function SubmitBracketPage() {
             placeholder="Enter your team name"
             maxLength={50}
           />
+        </div>
+
+        <div>
+          <label
+            htmlFor="bracket-password"
+            className="mb-2 block text-xs font-medium uppercase tracking-wider text-ink-dim"
+          >
+            Bracket password
+          </label>
+          <input
+            id="bracket-password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={inputCls}
+            placeholder="At least 4 characters"
+            maxLength={72}
+            autoComplete="new-password"
+          />
+          <p className="mt-1.5 text-xs text-ink-dim">
+            You&apos;ll use this to edit your picks from your team page until rosters lock — don&apos;t
+            forget it.
+          </p>
         </div>
 
         <div className="space-y-3">

@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { season_id, team_name, picks } = body;
+  const { season_id, team_name, picks, password } = body;
 
   if (!season_id || !team_name || !picks || picks.length !== 5) {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
+  }
+
+  if (new Set(picks).size !== 5) {
+    return NextResponse.json({ error: 'Each pick must be a different houseguest.' }, { status: 400 });
+  }
+
+  if (!password || typeof password !== 'string' || password.length < 4) {
+    return NextResponse.json(
+      { error: 'Please set a bracket password of at least 4 characters.' },
+      { status: 400 }
+    );
   }
 
   // Check if season exists and submissions are open
@@ -61,8 +73,9 @@ export async function POST(request: NextRequest) {
       pick_4_houseguest_id: picks[3],
       pick_5_houseguest_id: picks[4],
       total_score: 0,
+      edit_password: createHash('sha256').update(password).digest('hex'),
     })
-    .select()
+    .select('id, team_name')
     .single();
 
   if (error) {

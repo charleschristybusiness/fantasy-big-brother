@@ -164,6 +164,10 @@ Follow the dataviz method: form first, color by job, validated palette, thin mar
 - **Never** cycle or reassign chart series colors when filters change
 
 ## Data Conventions
+- **Bracket passwords**: `brackets.edit_password` stores a SHA-256 hex hash of the password set
+  at submission. Players edit their bracket from the team page (`/api/brackets/update`) until
+  `seasons.submissions_locked` is true ("roster lock"). The season `admin_password` works as a
+  plaintext master key in that route. Never return `edit_password` from API responses.
 - **Week-0 sentinel**: the `weekly_events` row with `week_number = 0` holds the LIVE house
   state (current HOH via `hoh_winner_id`, veto holder via `veto_winner_id`, nominees as
   `block_survivors` rows). It is display-only: `getHouseguestStats` in `scoring.ts` excludes
