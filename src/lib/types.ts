@@ -29,6 +29,8 @@ export interface Bracket {
   pick_4_houseguest_id: string;
   pick_5_houseguest_id: string;
   total_score: number;
+  /** Admin-only bookkeeping: whether this player has paid their league entry */
+  paid?: boolean;
   created_at: string;
 }
 

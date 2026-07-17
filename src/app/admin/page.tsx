@@ -282,6 +282,18 @@ export default function AdminPage() {
     setBrackets(brackets.filter((b) => b.id !== id));
   };
 
+  const togglePaid = async (bracket: Bracket) => {
+    const newPaid = !bracket.paid;
+    const { error } = await supabase
+      .from('brackets')
+      .update({ paid: newPaid })
+      .eq('id', bracket.id);
+
+    if (!error) {
+      setBrackets(brackets.map((b) => (b.id === bracket.id ? { ...b, paid: newPaid } : b)));
+    }
+  };
+
   const saveTeamName = async (bracketId: string) => {
     if (!editTeamName.trim()) return;
     await supabase
@@ -841,12 +853,23 @@ export default function AdminPage() {
       {/* Brackets management */}
       {activeTab === 'brackets' && (
         <Card className="p-6">
-          <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-ink-mid">
-            Submitted brackets{' '}
-            <span className="font-normal normal-case text-ink-dim tabular-nums">
-              ({brackets.length})
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-mid">
+              Submitted brackets{' '}
+              <span className="font-normal normal-case text-ink-dim tabular-nums">
+                ({brackets.length})
+              </span>
+            </h2>
+            <span className="text-sm text-ink-mid tabular-nums">
+              <span className="font-semibold text-emerald-400">
+                {brackets.filter((b) => b.paid).length}
+              </span>{' '}
+              of {brackets.length} paid
             </span>
-          </h2>
+          </div>
+          <p className="mb-5 text-xs text-ink-dim">
+            Payment tracking is only visible here in the admin panel.
+          </p>
 
           {brackets.length === 0 ? (
             <p className="text-sm text-ink-dim">No brackets submitted yet.</p>
@@ -889,6 +912,17 @@ export default function AdminPage() {
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-4">
+                    <button
+                      onClick={() => togglePaid(b)}
+                      className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                        b.paid
+                          ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-400 hover:bg-emerald-400/20'
+                          : 'border-edge bg-raised text-ink-dim hover:border-edge-bright hover:text-ink-mid'
+                      }`}
+                      aria-label={`Mark ${b.team_name} as ${b.paid ? 'unpaid' : 'paid'}`}
+                    >
+                      {b.paid ? '✓ Paid' : 'Unpaid'}
+                    </button>
                     <span className="text-sm font-semibold text-gold tabular-nums">
                       {Number(b.total_score).toFixed(2)} pts
                     </span>
